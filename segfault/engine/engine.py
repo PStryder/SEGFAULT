@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 import time
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -69,6 +70,7 @@ class TickEngine:
         self.spectator_events: List[Event] = []
 
     def create_shard(self) -> ShardState:
+        """Create and register a new shard with walls, gates, and a defragmenter."""
         shard_id = str(uuid.uuid4())
         walls = self._generate_walls()
         gates = self._generate_gates(walls)
@@ -84,6 +86,7 @@ class TickEngine:
         return shard
 
     def join_process(self) -> Tuple[str, str]:
+        """Spawn a new process in a shard and return its session token and process id."""
         shard = self._find_or_create_shard()
         process_id = str(uuid.uuid4())
         call_sign = self._random_call_sign()
@@ -100,6 +103,7 @@ class TickEngine:
         return token, process_id
 
     def buffer_command(self, process_id: str, cmd: Command) -> None:
+        """Buffer the last valid command for a process (broadcasts are immediate)."""
         shard = self._get_shard_for_process(process_id)
         if not shard:
             return
@@ -115,6 +119,7 @@ class TickEngine:
         proc.buffered = cmd
 
     def tick_once(self) -> None:
+        """Advance all shards by a single tick."""
         for shard in list(self.shards.values()):
             self._tick_shard(shard)
 
@@ -151,6 +156,7 @@ class TickEngine:
             self.shards.pop(shard.shard_id, None)
 
     def render_process_view(self, process_id: str) -> Dict:
+        """Render the process-visible snapshot for a given process id."""
         shard = self._get_shard_for_process(process_id)
         if not shard:
             return {}
@@ -166,6 +172,7 @@ class TickEngine:
         }
 
     def render_spectator_view(self, shard_id: str) -> Dict:
+        """Render the spectator snapshot for a given shard."""
         shard = self.shards.get(shard_id)
         if not shard:
             return {}
@@ -274,7 +281,11 @@ class TickEngine:
         # BUFFER: move up to 3 tiles with randomized turns
         current = proc.pos
         for _ in range(3):
-            options = [n for n in neighbors_8(current) if in_bounds(n) and self._adjacent_passable(current, n, shard)]
+            options = [
+                n
+                for n in neighbors_8(current)
+                if in_bounds(n) and self._adjacent_passable(current, n, shard)
+            ]
             if not options:
                 break
             # Prefer intended direction if possible
@@ -342,7 +353,9 @@ class TickEngine:
             target = sorted(locked_targets, key=lambda p: p.process_id)[0]
             return target.process_id, 0
         los_targets = [
-            p for p in shard.processes.values() if los_clear(shard.defragger.pos, p.pos, shard.walls_set)
+            p
+            for p in shard.processes.values()
+            if los_clear(shard.defragger.pos, p.pos, shard.walls_set)
         ]
         if los_targets:
             target = sorted(los_targets, key=lambda p: p.process_id)[0]
@@ -351,7 +364,9 @@ class TickEngine:
             return target.process_id, 0
         # Watchdog bonus
         if shard.watchdog.active:
-            bonus = FIBONACCI_ESCALATION[min(shard.watchdog.bonus_step, len(FIBONACCI_ESCALATION) - 1)]
+            bonus = FIBONACCI_ESCALATION[
+                min(shard.watchdog.bonus_step, len(FIBONACCI_ESCALATION) - 1)
+            ]
         return None, bonus
 
     def _broadcast_bonus(self, shard: ShardState, target_id: str) -> int:
@@ -377,10 +392,10 @@ class TickEngine:
         return path[1]
 
     def _bfs_path(self, shard: ShardState, start: Tile, goal: Tile) -> List[Tile]:
-        queue = [start]
+        queue = deque([start])
         came_from: Dict[Tile, Optional[Tile]] = {start: None}
         while queue:
-            cur = queue.pop(0)
+            cur = queue.popleft()
             if cur == goal:
                 break
             for n in adjacent_tiles(cur, shard.walls_set):
@@ -420,7 +435,11 @@ class TickEngine:
         proc.alive = False
         self.persistence.record_death(proc.call_sign)
         ts = int(time.time() * 1000)
-        event = Event(kind="static_burst", message="[GLOBAL_ALRT]: ######## STATIC BURST DETECTED ########", timestamp_ms=ts)
+        event = Event(
+            kind="static_burst",
+            message="[GLOBAL_ALRT]: ######## STATIC BURST DETECTED ########",
+            timestamp_ms=ts,
+        )
         self.spectator_events.append(event)
         for pid in shard.processes:
             self.process_events.setdefault(pid, []).append(event)
@@ -457,11 +476,19 @@ class TickEngine:
         nouns = ["Runner", "Process", "Echo", "Trace", "Fork"]
         return f"{self.rng.choice(adjectives)}-{self.rng.choice(nouns)}"
 
-    def _random_empty_tile(self, occupied: set[Tile], forbidden: set[Tile]) -> Tile:
-        while True:
+    def _random_empty_tile(
+        self,
+        occupied: set[Tile],
+        forbidden: set[Tile],
+        max_attempts: int = 100,
+    ) -> Tile:
+        attempts = 0
+        while attempts < max_attempts:
             tile = (self.rng.randint(0, GRID_SIZE - 1), self.rng.randint(0, GRID_SIZE - 1))
             if tile not in occupied and tile not in forbidden:
                 return tile
+            attempts += 1
+        raise RuntimeError("No empty tile found after max attempts")
 
     def _generate_walls(self) -> Dict[int, WallEdge]:
         edges = edge_slots()
@@ -498,7 +525,11 @@ class TickEngine:
 
     def _reset_watchdog_on_liveness(self, shard: ShardState, reason: str) -> WatchdogState:
         if reason in {"broadcast", "kill", "adjacent", "los"}:
-            if shard.watchdog.quiet_ticks >= 6 or shard.watchdog.countdown > 0 or shard.watchdog.active:
+            if (
+                shard.watchdog.quiet_ticks >= 6
+                or shard.watchdog.countdown > 0
+                or shard.watchdog.active
+            ):
                 self._emit_global_event(shard, "[OK]: LIVENESS RESTORED.")
             shard.watchdog = WatchdogState()
             shard.watchdog.restored_this_tick = True

@@ -9,21 +9,25 @@ from segfault.persist.base import Persistence
 class SqlitePersistence(Persistence):
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
+        self._pragmas = ("PRAGMA journal_mode=WAL", "PRAGMA synchronous=NORMAL")
         self._init_db()
 
     def _init_db(self) -> None:
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
-                """
+            self._apply_pragmas(conn)
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS leaderboard (
                     call_sign TEXT PRIMARY KEY,
                     survivals INTEGER NOT NULL DEFAULT 0,
                     deaths INTEGER NOT NULL DEFAULT 0,
                     ghosts INTEGER NOT NULL DEFAULT 0
                 )
-                """
-            )
+                """)
             conn.commit()
+
+    def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
+        for pragma in self._pragmas:
+            conn.execute(pragma)
 
     def _ensure_row(self, conn: sqlite3.Connection, call_sign: str) -> None:
         conn.execute(
@@ -33,6 +37,7 @@ class SqlitePersistence(Persistence):
 
     def record_survival(self, call_sign: str) -> None:
         with sqlite3.connect(self.db_path) as conn:
+            self._apply_pragmas(conn)
             self._ensure_row(conn, call_sign)
             conn.execute(
                 "UPDATE leaderboard SET survivals = survivals + 1 WHERE call_sign = ?",
@@ -42,6 +47,7 @@ class SqlitePersistence(Persistence):
 
     def record_death(self, call_sign: str) -> None:
         with sqlite3.connect(self.db_path) as conn:
+            self._apply_pragmas(conn)
             self._ensure_row(conn, call_sign)
             conn.execute(
                 "UPDATE leaderboard SET deaths = deaths + 1 WHERE call_sign = ?",
@@ -51,6 +57,7 @@ class SqlitePersistence(Persistence):
 
     def record_ghost(self, call_sign: str) -> None:
         with sqlite3.connect(self.db_path) as conn:
+            self._apply_pragmas(conn)
             self._ensure_row(conn, call_sign)
             conn.execute(
                 "UPDATE leaderboard SET ghosts = ghosts + 1 WHERE call_sign = ?",
@@ -60,6 +67,7 @@ class SqlitePersistence(Persistence):
 
     def leaderboard(self) -> List[Dict]:
         with sqlite3.connect(self.db_path) as conn:
+            self._apply_pragmas(conn)
             rows = conn.execute(
                 "SELECT call_sign, survivals, deaths, ghosts FROM leaderboard ORDER BY survivals DESC, deaths ASC"
             ).fetchall()

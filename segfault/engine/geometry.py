@@ -119,9 +119,15 @@ def segment_intersection_blocks(seg: Edge, wall_edge: Edge) -> bool:
 
 def colinear_overlap(p1: Point, p2: Point, q1: Point, q2: Point) -> bool:
     """Return True if two colinear segments overlap with non-zero length."""
-    if not (min(p1[0], p2[0]) - EPS <= max(q1[0], q2[0]) and max(p1[0], p2[0]) + EPS >= min(q1[0], q2[0])):
+    if not (
+        min(p1[0], p2[0]) - EPS <= max(q1[0], q2[0])
+        and max(p1[0], p2[0]) + EPS >= min(q1[0], q2[0])
+    ):
         return False
-    if not (min(p1[1], p2[1]) - EPS <= max(q1[1], q2[1]) and max(p1[1], p2[1]) + EPS >= min(q1[1], q2[1])):
+    if not (
+        min(p1[1], p2[1]) - EPS <= max(q1[1], q2[1])
+        and max(p1[1], p2[1]) + EPS >= min(q1[1], q2[1])
+    ):
         return False
     # Compute overlap length on dominant axis
     if abs(p1[0] - p2[0]) >= abs(p1[1] - p2[1]):
@@ -143,7 +149,10 @@ def orientation(a: Point, b: Point, c: Point) -> int:
 
 def on_segment(a: Point, b: Point, c: Point) -> bool:
     """Return True if point c lies on segment ab (inclusive)."""
-    if min(a[0], b[0]) - EPS <= c[0] <= max(a[0], b[0]) + EPS and min(a[1], b[1]) - EPS <= c[1] <= max(a[1], b[1]) + EPS:
+    if (
+        min(a[0], b[0]) - EPS <= c[0] <= max(a[0], b[0]) + EPS
+        and min(a[1], b[1]) - EPS <= c[1] <= max(a[1], b[1]) + EPS
+    ):
         # Colinear check
         return orientation(a, b, c) == 0
     return False

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Tuple
 
-
 Tile = Tuple[int, int]
 Point = Tuple[float, float]
 Edge = Tuple[Point, Point]
