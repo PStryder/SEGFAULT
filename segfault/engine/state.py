@@ -37,6 +37,7 @@ class SayEvent:
     message: str
     recipients: List[SayRecipient]
     timestamp_ms: int
+    tick: int
 
 
 @dataclass

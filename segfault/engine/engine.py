@@ -51,6 +51,7 @@ DIRECTION_MAP = {
 
 CHAT_ARTIFACT_PROB = 0.015
 CHAT_ARTIFACTS = ("...", "[STATIC]")
+SAY_EVENT_TTL_TICKS = 3
 
 
 @dataclass
@@ -211,15 +212,19 @@ class TickEngine:
                     "sender_pos": ev.sender_pos,
                     "message": ev.message,
                     "timestamp_ms": ev.timestamp_ms,
+                    "tick": ev.tick,
                     "recipients": [{"id": r.process_id, "pos": r.pos} for r in ev.recipients],
                 }
                 for ev in shard.say_events
             ],
         }
 
-    def clear_say_events(self) -> None:
+    def trim_say_events(self) -> None:
+        max_age = SAY_EVENT_TTL_TICKS - 1
         for shard in self.shards.values():
-            shard.say_events = []
+            if not shard.say_events:
+                continue
+            shard.say_events = [ev for ev in shard.say_events if shard.tick - ev.tick <= max_age]
 
     # Internal helpers
 
@@ -470,6 +475,7 @@ class TickEngine:
                     for proc in recipients_by_spatial
                 ],
                 timestamp_ms=ts,
+                tick=shard.tick,
             )
         )
         if not recipients_by_pid:
