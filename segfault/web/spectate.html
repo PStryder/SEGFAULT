@@ -23,6 +23,7 @@
     let shardId = null;
     let ws = null;
     let chatWs = null;
+    const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
 
     async function loadShards() {
       const res = await fetch('/spectate/shards');
@@ -41,7 +42,7 @@
     function connectShard(id) {
       shardId = id;
       if (ws) ws.close();
-      ws = new WebSocket(`ws://${location.host}/spectate/ws/${shardId}`);
+      ws = new WebSocket(`${wsScheme}://${location.host}/spectate/ws/${shardId}`);
       ws.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
         const gridText = data.grid.map(row => row.join(' ')).join('\n');
@@ -68,7 +69,7 @@
     }
 
     function connectChat() {
-      chatWs = new WebSocket(`ws://${location.host}/chat/ws`);
+      chatWs = new WebSocket(`${wsScheme}://${location.host}/chat/ws`);
       chatWs.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
         const log = document.getElementById('chatlog');

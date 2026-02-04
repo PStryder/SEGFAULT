@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from segfault.common.constants import GRID_SIZE
 from segfault.common.types import Broadcast, Command, CommandType, GateType, Tile
 from segfault.engine.geometry import WallEdge
 

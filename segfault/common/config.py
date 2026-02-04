@@ -4,6 +4,12 @@ import os
 from dataclasses import dataclass
 
 
+def _env_bool(value: str, default: bool = True) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime settings loaded from environment variables.
@@ -17,6 +23,7 @@ class Settings:
     min_active_processes: int = int(os.getenv("SEGFAULT_MIN_ACTIVE_PROCESSES", "1"))
     empty_shard_ticks: int = int(os.getenv("SEGFAULT_EMPTY_SHARD_TICKS", "12"))
     random_seed: int = int(os.getenv("SEGFAULT_RANDOM_SEED", "42"))
+    enable_tick_loop: bool = _env_bool(os.getenv("SEGFAULT_ENABLE_TICK_LOOP", "1"))
 
 
 settings = Settings()

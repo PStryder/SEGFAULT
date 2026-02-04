@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -67,7 +68,8 @@ async def _startup() -> None:
     global persistence, engine
     persistence = SqlitePersistence(settings.db_path)
     if persistence.flavor_count() == 0:
-        inserted = persistence.seed_flavor_from_markdown("segfault/lore/flavor.md")
+        flavor_path = Path(__file__).resolve().parents[1] / "lore" / "flavor.md"
+        inserted = persistence.seed_flavor_from_markdown(str(flavor_path))
         logger.info("Seeded %s flavor lines", inserted)
     engine = TickEngine(
         persistence,
@@ -76,7 +78,16 @@ async def _startup() -> None:
         empty_shard_ticks=settings.empty_shard_ticks,
     )
     engine.create_shard()
-    asyncio.create_task(tick_loop())
+    if settings.enable_tick_loop:
+        asyncio.create_task(tick_loop())
+    else:
+        logger.warning("Tick loop disabled via SEGFAULT_ENABLE_TICK_LOOP")
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    if persistence is not None:
+        persistence.close()
 
 
 async def tick_loop() -> None:
@@ -94,7 +105,6 @@ async def tick_loop() -> None:
             if not state:
                 continue
             _queue_latest(queue, state)
-        game_engine.trim_say_events()
         await asyncio.sleep(settings.tick_seconds)
 
 
@@ -198,15 +208,14 @@ def flavor_random(channel: str | None = None) -> Response | Dict[str, str]:
         channel = channel.lower()
         if channel not in FLAVOR_CHANNELS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid channel")
-        text = store.random_flavor(channel)
-        if not text:
+        entry = store.random_flavor(channel)
+        if not entry:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-        return {"text": text, "channel": channel}
-    entry = store.random_flavor_entry()
+        return entry
+    entry = store.random_flavor()
     if not entry:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    text, entry_channel = entry
-    return {"text": text, "channel": entry_channel}
+    return entry
 
 
 @app.get("/spectate/shards")

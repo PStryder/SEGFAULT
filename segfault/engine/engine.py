@@ -79,7 +79,6 @@ class TickEngine:
         self.process_to_shard: Dict[str, str] = {}
         self.session_tokens: Dict[str, str] = {}
         self.process_events: Dict[str, List[Event]] = {}
-        self.spectator_events: List[Event] = []
 
     def create_shard(self) -> ShardState:
         """Create and register a new shard with walls, gates, and a defragmenter."""
@@ -156,6 +155,8 @@ class TickEngine:
         self._resolve_defragger(shard)
         # Watchdog progression if no liveness restored this tick
         self._advance_watchdog(shard)
+        # Trim SAY traces after tick advancement
+        self._trim_old_say_events(shard)
         # Clear broadcasts for this tick window
         shard.broadcasts.clear()
         shard.watchdog.restored_this_tick = False
@@ -219,12 +220,12 @@ class TickEngine:
             ],
         }
 
-    def trim_say_events(self) -> None:
+    def _trim_old_say_events(self, shard: ShardState) -> None:
+        """Retain a short rolling window of SAY events for spectators."""
         max_age = SAY_EVENT_TTL_TICKS - 1
-        for shard in self.shards.values():
-            if not shard.say_events:
-                continue
-            shard.say_events = [ev for ev in shard.say_events if shard.tick - ev.tick <= max_age]
+        if not shard.say_events:
+            return
+        shard.say_events = [ev for ev in shard.say_events if shard.tick - ev.tick <= max_age]
 
     # Internal helpers
 
@@ -445,7 +446,6 @@ class TickEngine:
         ts = int(time.time() * 1000)
         shard.broadcasts.append(Broadcast(process_id=process_id, message=message, timestamp_ms=ts))
         event = Event(kind="broadcast", message=f"[BCAST] {message}", timestamp_ms=ts)
-        self.spectator_events.append(event)
         for pid in shard.processes:
             self.process_events.setdefault(pid, []).append(event)
         # Watchdog reset condition: broadcast
@@ -459,7 +459,7 @@ class TickEngine:
         recipients = [
             proc
             for pid, proc in shard.processes.items()
-            if pid != process_id and proc.alive and _is_adjacent_moore(sender.pos, proc.pos)
+            if pid != process_id and proc.alive and _is_adjacent(sender.pos, proc.pos, shard)
         ]
         recipients_by_pid = sorted(recipients, key=lambda proc: proc.process_id)
         recipients_by_spatial = sorted(
@@ -501,7 +501,6 @@ class TickEngine:
             message="[GLOBAL_ALRT]: ######## STATIC BURST DETECTED ########",
             timestamp_ms=ts,
         )
-        self.spectator_events.append(event)
         for pid in shard.processes:
             self.process_events.setdefault(pid, []).append(event)
         # Watchdog reset condition: kill
@@ -511,6 +510,10 @@ class TickEngine:
     def _remove_process(self, shard: ShardState, proc: ProcessState) -> None:
         shard.processes.pop(proc.process_id, None)
         self.process_to_shard.pop(proc.process_id, None)
+        self.process_events.pop(proc.process_id, None)
+        for token, pid in list(self.session_tokens.items()):
+            if pid == proc.process_id:
+                self.session_tokens.pop(token, None)
 
     def _transfer_process(self, proc: ProcessState) -> None:
         # Create new process in a new shard
@@ -533,6 +536,7 @@ class TickEngine:
         return None
 
     def _random_call_sign(self) -> str:
+        """Generate a short call sign for leaderboard identity."""
         adjectives = ["Static", "Ghost", "Null", "Cache", "Wired"]
         nouns = ["Runner", "Process", "Echo", "Trace", "Fork"]
         return f"{self.rng.choice(adjectives)}-{self.rng.choice(nouns)}"
@@ -552,6 +556,7 @@ class TickEngine:
         raise RuntimeError("No empty tile found after max attempts")
 
     def _generate_walls(self) -> Dict[int, WallEdge]:
+        """Generate a wall set that preserves connectivity and avoids dead cells."""
         edges = edge_slots()
         for _ in range(500):
             self.rng.shuffle(edges)
@@ -564,6 +569,7 @@ class TickEngine:
         return {i: e for i, e in enumerate(edges[:80])}
 
     def _generate_gates(self, walls: Dict[int, WallEdge]) -> List[Gate]:
+        """Generate a stable gate and a random number of ghost gates."""
         gates: List[Gate] = []
         stable = Gate(gate_type=GateType.STABLE, pos=self._random_empty_tile(set(), set()))
         gates.append(stable)
@@ -599,7 +605,6 @@ class TickEngine:
     def _emit_global_event(self, shard: ShardState, message: str) -> None:
         ts = int(time.time() * 1000)
         event = Event(kind="system", message=message, timestamp_ms=ts)
-        self.spectator_events.append(event)
         for pid in shard.processes:
             self.process_events.setdefault(pid, []).append(event)
 
@@ -740,12 +745,6 @@ def _is_adjacent(a: Tile, b: Tile, shard: ShardState) -> bool:
     if dx + dy == 1:
         return not wall_blocks(a, b, shard.walls_set)
     return diagonal_legal(a, b, shard.walls_set)
-
-
-def _is_adjacent_moore(a: Tile, b: Tile) -> bool:
-    dx = abs(a[0] - b[0])
-    dy = abs(a[1] - b[1])
-    return (dx <= 1 and dy <= 1) and not (dx == 0 and dy == 0)
 
 
 def _spatial_order(a: Tile, b: Tile) -> int:

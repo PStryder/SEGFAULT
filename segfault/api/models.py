@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class JoinResponse(BaseModel):
@@ -34,7 +34,7 @@ class SpectatorShardState(BaseModel):
     gates: List[dict]
     processes: List[dict]
     watchdog: dict
-    say_events: List[dict] = []
+    say_events: List[dict] = Field(default_factory=list)
 
 
 class ChatMessage(BaseModel):

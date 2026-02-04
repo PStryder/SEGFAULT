@@ -37,12 +37,12 @@ def test_flavor_seed_and_random_selection():
         assert persistence.random_flavor("sys") is not None
         assert persistence.random_flavor() is not None
 
-        entry = persistence.random_flavor_entry()
+        entry = persistence.random_flavor()
         assert entry is not None
-        text, channel = entry
-        assert text
-        assert channel in {"proc", "spec", "sys"}
+        assert entry["text"]
+        assert entry["channel"] in {"proc", "spec", "sys"}
 
+        persistence.close()
         persistence = None
         gc.collect()
         time.sleep(0.05)
