@@ -10,6 +10,7 @@
   <div id="shards"></div>
   <pre id="grid"></pre>
   <pre id="watchdog"></pre>
+  <div id="flavor"></div>
   <div id="chat">
     <h3>Global Chat</h3>
     <div id="chatlog"></div>
@@ -71,8 +72,23 @@
       }
     };
 
+    async function refreshFlavor() {
+      try {
+        const res = await fetch('/flavor/random?channel=spec');
+        if (!res.ok || res.status === 204) return;
+        const data = await res.json();
+        if (data && data.text) {
+          document.getElementById('flavor').textContent = data.text;
+        }
+      } catch (err) {
+        // Silent fail
+      }
+    }
+
     loadShards();
     connectChat();
+    refreshFlavor();
+    setInterval(refreshFlavor, 7000);
   </script>
 </body>
 </html>

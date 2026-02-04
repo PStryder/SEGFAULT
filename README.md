@@ -118,3 +118,5 @@ make lint     # ruff
 make format   # black
 ```
 
+Developer note: flavor text is seeded into SQLite on first startup from `segfault/lore/flavor.md`.
+

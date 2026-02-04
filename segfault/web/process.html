@@ -8,6 +8,7 @@
 <body>
   <h1>PROCESS TERMINAL</h1>
   <div id="status">Not connected</div>
+  <div id="flavor"></div>
   <pre id="grid"></pre>
   <pre id="events"></pre>
   <h2 id="docs-title">SYSTEM NOTICE</h2>
@@ -26,6 +27,19 @@
         document.getElementById('docs').textContent = (data.lines || []).join('\n');
       } catch (err) {
         // No-op: docs are optional
+      }
+    }
+
+    async function refreshFlavor() {
+      try {
+        const res = await fetch('/flavor/random?channel=proc');
+        if (!res.ok || res.status === 204) return;
+        const data = await res.json();
+        if (data && data.text) {
+          document.getElementById('flavor').textContent = data.text;
+        }
+      } catch (err) {
+        // Silent fail
       }
     }
     async function join() {
@@ -66,6 +80,8 @@
 
     join();
     loadDocs();
+    refreshFlavor();
+    setInterval(refreshFlavor, 7000);
     setInterval(poll, 1000);
   </script>
 </body>

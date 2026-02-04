@@ -1,0 +1,1002 @@
+# SEGFAULT Flavor Text
+
+- [PROC] kernel whispers in the cold buffer
+- [SPEC] daemon loops beyond null cache
+- [SYS] frozen node echoes without port
+- [PROC] syslog: scheduler drifts (hollow signal)
+- [SPEC] daemon hangs: dead handle at record
+- [SYS] trace: closed module thins
+- [PROC] audit: log slips; dark packet
+- [SPEC] warning: grey socket flickers
+- [SYS] notice: timer hums near latent page
+- [PROC] panic: index starves under tainted cache
+- [SPEC] linker sheds without wake
+- [SYS] black clock stutters; with no path
+- [PROC] router stalls in the unnamed branch
+- [SPEC] bridge bleeds beyond unwritten snapshot
+- [SYS] static pointer sleeps without table
+- [PROC] syslog: monitor fades (ghost ring)
+- [SPEC] daemon misroutes: corrupt packet at branch
+- [SYS] trace: leaking lock spools
+- [PROC] audit: driver decays; unbound node
+- [SPEC] warning: unsorted trace scrapes
+- [SYS] notice: orphan desyncs near unread segment
+- [PROC] panic: heap calcifies under brittle descriptor
+- [SPEC] module unthreads with no label
+- [SYS] hungry gate waits; in soft lock
+- [PROC] bus restarts in the drifting timer
+- [SPEC] port corrupts beyond encrypted daemon
+- [SYS] foreign record trembles without page
+- [PROC] syslog: pipe reaps (unmapped thread)
+- [SPEC] daemon fractures: burned block at channel
+- [SYS] trace: stale frame folds
+- [PROC] audit: mutex mutates; silent stack
+- [SPEC] warning: muted device glitches
+- [SYS] notice: stack rattles near stuttering audit
+- [PROC] panic: descriptor rebinds under wrong trace
+- [SPEC] page whispers in safe mode
+- [SYS] empty address loops; at the edge
+- [PROC] inode echoes in the cold port
+- [SPEC] block drifts beyond null context
+- [SYS] frozen service hangs without pipe
+- [PROC] syslog: signal thins (hollow line)
+- [SPEC] daemon slips: dead pipe at mutex
+- [SYS] trace: closed sector flickers
+- [PROC] audit: route hums; dark segment
+- [SPEC] warning: grey cursor starves
+- [SYS] notice: checksum sheds near latent channel
+- [PROC] panic: shadow stutters under tainted module
+- [SPEC] cursor stalls beneath the table
+- [SYS] black cache bleeds; under static
+- [PROC] lock sleeps in the unnamed node
+- [SPEC] handle fades beyond unwritten signal
+- [SYS] static handle misroutes without record
+- [PROC] syslog: snapshot spools (ghost module)
+- [SPEC] daemon decays: corrupt log at packet
+- [SYS] trace: leaking socket scrapes
+- [PROC] audit: page desyncs; unbound log
+- [SPEC] warning: unsorted index calcifies
+- [SYS] notice: record unthreads near unread queue
+- [PROC] panic: clock waits under brittle context
+- [SPEC] kernel restarts without wake
+- [SYS] hungry snapshot corrupts; with no path
+- [PROC] watchdog trembles in the drifting pointer
+- [SPEC] scheduler reaps beyond encrypted ring
+- [SYS] foreign packet fractures without branch
+- [PROC] syslog: allocator folds (unmapped lock)
+- [SPEC] daemon mutates: burned driver at node
+- [SYS] trace: stale trace glitches
+- [PROC] audit: segment rattles; silent service
+- [SPEC] warning: muted heap rebinds
+- [SYS] notice: linker whispers near stuttering table
+- [PROC] panic: gate loops under wrong gate
+- [SPEC] router echoes with no label
+- [SYS] empty daemon drifts; in soft lock
+- [PROC] collector hangs in the cold record
+- [SPEC] monitor thins beyond null thread
+- [SYS] frozen block slips without channel
+- [PROC] syslog: process flickers (hollow frame)
+- [SPEC] daemon hums: dead mutex at stack
+- [SYS] trace: closed device starves
+- [PROC] audit: audit sheds; dark timer
+- [SPEC] warning: grey descriptor stutters
+- [SYS] notice: module stalls near latent stack
+- [PROC] panic: address bleeds under tainted index
+- [SPEC] bus sleeps in safe mode
+- [SYS] black context fades; at the edge
+- [PROC] socket misroutes in the unnamed service
+- [SPEC] pipe spools beyond unwritten line
+- [SYS] static pipe decays without mutex
+- [PROC] syslog: stdout scrapes (ghost sector)
+- [SPEC] daemon desyncs: corrupt route at segment
+- [SYS] trace: leaking cursor calcifies
+- [PROC] audit: channel unthreads; unbound queue
+- [SPEC] warning: unsorted shadow waits
+- [SYS] notice: page restarts near unread buffer
+- [PROC] panic: cache corrupts under brittle sector
+- [SPEC] inode trembles beneath the table
+- [SYS] hungry signal reaps; under static
+- [PROC] frame fractures in the drifting handle
+- [SPEC] signal folds beyond encrypted module
+- [SYS] foreign log mutates without packet
+- [PROC] syslog: vector glitches (unmapped socket)
+- [SPEC] daemon rattles: burned page at log
+- [SYS] trace: stale index rebinds
+- [PROC] audit: queue whispers; silent route
+- [SPEC] warning: muted clock loops
+- [SYS] notice: cursor echoes near stuttering branch
+- [PROC] panic: snapshot drifts under wrong thread
+- [SPEC] lock hangs without wake
+- [SYS] empty ring thins; with no path
+- [PROC] context slips in the cold packet
+- [SPEC] snapshot flickers beyond null lock
+- [SYS] frozen driver hums without node
+- [PROC] syslog: audit starves (hollow trace)
+- [SPEC] daemon sheds: dead segment at service
+- [SYS] trace: closed heap stutters
+- [PROC] audit: table stalls; dark block
+- [SPEC] warning: grey gate bleeds
+- [SYS] notice: kernel sleeps near latent timer
+- [PROC] panic: daemon fades under tainted snapshot
+- [SPEC] watchdog misroutes with no label
+- [SYS] black thread spools; in soft lock
+- [PROC] init decays in the unnamed block
+- [SPEC] allocator scrapes beyond unwritten frame
+- [SYS] static mutex desyncs without stack
+- [PROC] syslog: reaper calcifies (ghost device)
+- [SPEC] daemon unthreads: corrupt audit at timer
+- [SYS] trace: leaking descriptor waits
+- [PROC] audit: stack restarts; unbound pointer
+- [SPEC] warning: unsorted address corrupts
+- [SYS] notice: router trembles near unread port
+- [PROC] panic: context reaps under brittle shadow
+- [SPEC] collector fractures in safe mode
+- [SYS] hungry line folds; at the edge
+- [PROC] thread mutates in the drifting pipe
+- [SPEC] process glitches beyond encrypted sector
+- [SYS] foreign route rattles without segment
+- [PROC] syslog: parent rebinds (unmapped cursor)
+- [SPEC] daemon whispers: burned channel at queue
+- [SYS] trace: stale shadow loops
+- [PROC] audit: buffer echoes; silent buffer
+- [SPEC] warning: muted cache drifts
+- [SYS] notice: bus hangs near stuttering node
+- [PROC] panic: signal thins under wrong device
+- [SPEC] socket slips beneath the table
+- [SYS] empty module flickers; under static
+- [PROC] stdin hums in the cold log
+- [SPEC] stdout starves beyond null socket
+- [SYS] frozen page sheds without log
+- [PROC] syslog: cache stutters (hollow index)
+- [SPEC] daemon stalls: dead queue at route
+- [SYS] trace: closed clock bleeds
+- [PROC] audit: branch sleeps; dark audit
+- [SPEC] warning: grey snapshot fades
+- [SYS] notice: inode misroutes near latent pointer
+- [PROC] panic: ring spools under tainted lock
+- [SPEC] frame decays without wake
+- [SYS] black lock scrapes; with no path
+- [PROC] interrupt desyncs in the unnamed driver
+- [SPEC] vector calcifies beyond unwritten trace
+- [SYS] static segment unthreads without service
+- [PROC] syslog: entropy waits (ghost heap)
+- [SPEC] daemon restarts: corrupt table at block
+- [SYS] trace: leaking gate corrupts
+- [PROC] audit: timer trembles; unbound driver
+- [SPEC] warning: unsorted daemon reaps
+- [SYS] notice: lock fractures near unread record
+- [PROC] panic: thread folds under brittle signal
+- [SPEC] context mutates with no label
+- [SYS] hungry frame glitches; in soft lock
+- [PROC] shadow rattles in the drifting mutex
+- [SPEC] audit rebinds beyond encrypted device
+- [SYS] foreign audit whispers without timer
+- [PROC] syslog: log loops (unmapped descriptor)
+- [SPEC] daemon echoes: burned stack at pointer
+- [SYS] trace: stale address drifts
+- [PROC] audit: port hangs; silent handle
+- [SPEC] warning: muted context thins
+- [SYS] notice: watchdog slips near stuttering service
+- [PROC] panic: line flickers under wrong address
+- [SPEC] init hums in safe mode
+- [SYS] empty sector starves; at the edge
+- [PROC] syslog sheds in the cold route
+- [SPEC] reaper stutters beyond null cursor
+- [SYS] frozen channel stalls without queue
+- [PROC] syslog: loader bleeds (hollow shadow)
+- [SPEC] daemon sleeps: dead buffer at buffer
+- [SYS] trace: closed cache fades
+- [PROC] audit: node misroutes; dark port
+- [SPEC] warning: grey signal spools
+- [SYS] notice: collector decays near latent handle
+- [PROC] panic: module scrapes under tainted heap
+- [SPEC] thread desyncs beneath the table
+- [SYS] black socket calcifies; under static
+- [PROC] child unthreads in the unnamed page
+- [SPEC] parent waits beyond unwritten index
+- [SYS] static queue restarts without route
+- [PROC] syslog: driver corrupts (ghost clock)
+- [SPEC] daemon trembles: corrupt branch at audit
+- [SYS] trace: leaking snapshot reaps
+- [PROC] audit: pointer fractures; unbound table
+- [SPEC] warning: unsorted ring folds
+- [SYS] notice: socket mutates near unread packet
+- [PROC] panic: lock glitches under brittle socket
+- [SPEC] stdin rattles without wake
+- [SYS] hungry trace rebinds; with no path
+- [PROC] stderr whispers in the drifting segment
+- [SPEC] cache loops beyond encrypted heap
+- [SYS] foreign table echoes without block
+- [PROC] syslog: heap drifts (unmapped gate)
+- [SPEC] daemon hangs: burned timer at driver
+- [SYS] trace: stale daemon thins
+- [PROC] audit: record slips; silent page
+- [SPEC] warning: muted thread flickers
+- [SYS] notice: frame hums near stuttering block
+- [PROC] panic: frame starves under wrong line
+- [SPEC] interrupt sheds with no label
+- [SYS] empty device stutters; in soft lock
+- [PROC] clock stalls in the cold audit
+- [SPEC] entropy bleeds beyond null descriptor
+- [SYS] frozen stack sleeps without pointer
+- [PROC] syslog: index fades (hollow address)
+- [SPEC] daemon misroutes: dead port at handle
+- [SYS] trace: closed context spools
+- [PROC] audit: service decays; dark pipe
+- [SPEC] warning: grey line scrapes
+- [SYS] notice: context desyncs near latent pipe
+- [PROC] panic: sector calcifies under tainted daemon
+- [SPEC] shadow unthreads in safe mode
+- [SYS] black cursor waits; at the edge
+- [PROC] trace restarts in the unnamed channel
+- [SPEC] log corrupts beyond unwritten shadow
+- [SYS] static buffer trembles without buffer
+- [PROC] syslog: ledger reaps (ghost cache)
+- [SPEC] daemon fractures: corrupt node at port
+- [SYS] trace: leaking signal folds
+- [PROC] audit: handle mutates; unbound record
+- [SPEC] warning: unsorted module glitches
+- [SYS] notice: init rattles near unread log
+- [PROC] panic: socket rebinds under brittle clock
+- [SPEC] syslog whispers beneath the table
+- [SYS] hungry index loops; under static
+- [PROC] timer echoes in the drifting queue
+- [SPEC] loader drifts beyond encrypted clock
+- [SYS] foreign branch hangs without audit
+- [PROC] syslog: resolver thins (unmapped snapshot)
+- [SPEC] daemon slips: burned pointer at table
+- [SYS] trace: stale ring flickers
+- [PROC] audit: packet hums; silent branch
+- [SPEC] warning: muted lock starves
+- [SYS] notice: thread sheds near stuttering driver
+- [PROC] panic: trace stutters under wrong cursor
+- [SPEC] child stalls without wake
+- [SYS] empty heap bleeds; with no path
+- [PROC] orphan sleeps in the cold table
+- [SPEC] driver fades beyond null gate
+- [SYS] frozen timer misroutes without driver
+- [PROC] syslog: firmware spools (hollow daemon)
+- [SPEC] daemon decays: dead record at page
+- [SYS] trace: closed thread scrapes
+- [PROC] audit: block desyncs; dark channel
+- [SPEC] warning: grey frame calcifies
+- [SYS] notice: stdin unthreads near latent mutex
+- [PROC] panic: device waits under tainted frame
+- [SPEC] stderr restarts with no label
+- [SYS] black descriptor corrupts; in soft lock
+- [PROC] stack trembles in the unnamed stack
+- [SPEC] heap reaps beyond unwritten address
+- [SYS] static port fractures without handle
+- [PROC] syslog: sector folds (ghost context)
+- [SPEC] daemon mutates: corrupt service at pipe
+- [SYS] trace: leaking line glitches
+- [PROC] audit: pipe rattles; unbound mutex
+- [SPEC] warning: unsorted sector rebinds
+- [SYS] notice: interrupt whispers near unread route
+- [PROC] panic: cursor loops under brittle ring
+- [SPEC] clock echoes in safe mode
+- [SYS] hungry shadow drifts; at the edge
+- [PROC] checksum hangs in the drifting buffer
+- [SPEC] index thins beyond encrypted cache
+- [SYS] foreign node slips without port
+- [PROC] syslog: mutex flickers (unmapped signal)
+- [SPEC] daemon hums: burned handle at record
+- [SYS] trace: stale module starves
+- [PROC] audit: log sheds; silent packet
+- [SPEC] warning: muted socket stutters
+- [SYS] notice: shadow stalls near stuttering page
+- [PROC] panic: index bleeds under wrong cache
+- [SPEC] trace sleeps beneath the table
+- [SYS] empty clock fades; under static
+- [PROC] record misroutes in the cold branch
+- [SPEC] ledger spools beyond null snapshot
+- [SYS] frozen pointer decays without table
+- [PROC] syslog: daemon scrapes (hollow ring)
+- [SPEC] daemon desyncs: dead packet at branch
+- [SYS] trace: closed lock calcifies
+- [PROC] audit: driver unthreads; dark node
+- [SPEC] warning: grey trace waits
+- [SYS] notice: syslog restarts near latent segment
+- [PROC] panic: heap corrupts under tainted descriptor
+- [SPEC] timer trembles without wake
+- [SYS] black gate reaps; with no path
+- [PROC] linker fractures in the unnamed timer
+- [SPEC] resolver folds beyond unwritten daemon
+- [SYS] static record mutates without page
+- [PROC] syslog: bridge glitches (ghost thread)
+- [SPEC] daemon rattles: corrupt block at channel
+- [SYS] trace: leaking frame rebinds
+- [PROC] audit: mutex whispers; unbound stack
+- [SPEC] warning: unsorted device loops
+- [SYS] notice: child echoes near unread audit
+- [PROC] panic: descriptor drifts under brittle trace
+- [SPEC] orphan hangs with no label
+- [SYS] hungry address thins; in soft lock
+- [PROC] module slips in the drifting port
+- [SPEC] firmware flickers beyond encrypted context
+- [SYS] foreign service hums without pipe
+- [PROC] syslog: port starves (unmapped line)
+- [SPEC] daemon sheds: burned pipe at mutex
+- [SYS] trace: stale sector stutters
+- [PROC] audit: route stalls; silent segment
+- [SPEC] warning: muted cursor bleeds
+- [SYS] notice: stderr sleeps near stuttering channel
+- [PROC] panic: shadow fades under wrong module
+- [SPEC] stack misroutes in safe mode
+- [SYS] empty cache spools; at the edge
+- [PROC] page decays in the cold node
+- [SPEC] sector scrapes beyond null signal
+- [SYS] frozen handle desyncs without record
+- [PROC] syslog: block calcifies (hollow module)
+- [SPEC] daemon unthreads: dead log at packet
+- [SYS] trace: closed socket waits
+- [PROC] audit: page restarts; dark log
+- [SPEC] warning: grey index corrupts
+- [SYS] notice: clock trembles near latent queue
+- [PROC] panic: clock reaps under tainted context
+- [SPEC] checksum fractures beneath the table
+- [SYS] black snapshot folds; under static
+- [PROC] cursor mutates in the unnamed pointer
+- [SPEC] mutex glitches beyond unwritten ring
+- [SYS] static packet rattles without branch
+- [PROC] syslog: handle rebinds (ghost lock)
+- [SPEC] daemon whispers: corrupt driver at node
+- [SYS] trace: leaking trace loops
+- [PROC] audit: segment echoes; unbound service
+- [SPEC] warning: unsorted heap drifts
+- [SYS] notice: trace hangs near unread table
+- [PROC] panic: gate thins under brittle gate
+- [SPEC] record slips without wake
+- [SYS] hungry daemon flickers; with no path
+- [PROC] kernel hums in the drifting record
+- [SPEC] daemon starves beyond encrypted thread
+- [SYS] foreign block sheds without channel
+- [PROC] syslog: scheduler stutters (unmapped frame)
+- [SPEC] daemon stalls: burned mutex at stack
+- [SYS] trace: stale device bleeds
+- [PROC] audit: audit sleeps; silent timer
+- [SPEC] warning: muted descriptor fades
+- [SYS] notice: timer misroutes near stuttering stack
+- [PROC] panic: address spools under wrong index
+- [SPEC] linker decays with no label
+- [SYS] empty context scrapes; in soft lock
+- [PROC] router desyncs in the cold service
+- [SPEC] bridge calcifies beyond null line
+- [SYS] frozen pipe unthreads without mutex
+- [PROC] syslog: monitor waits (hollow sector)
+- [SPEC] daemon restarts: dead route at segment
+- [SYS] trace: closed cursor corrupts
+- [PROC] audit: channel trembles; dark queue
+- [SPEC] warning: grey shadow reaps
+- [SYS] notice: orphan fractures near latent buffer
+- [PROC] panic: cache folds under tainted sector
+- [SPEC] module mutates in safe mode
+- [SYS] black signal glitches; at the edge
+- [PROC] bus rattles in the unnamed handle
+- [SPEC] port rebinds beyond unwritten module
+- [SYS] static log whispers without packet
+- [PROC] syslog: pipe loops (ghost socket)
+- [SPEC] daemon echoes: corrupt page at log
+- [SYS] trace: leaking index drifts
+- [PROC] audit: queue hangs; unbound route
+- [SPEC] warning: unsorted clock thins
+- [SYS] notice: stack slips near unread branch
+- [PROC] panic: snapshot flickers under brittle thread
+- [SPEC] page hums beneath the table
+- [SYS] hungry ring starves; under static
+- [PROC] inode sheds in the drifting packet
+- [SPEC] block stutters beyond encrypted lock
+- [SYS] foreign driver stalls without node
+- [PROC] syslog: signal bleeds (unmapped trace)
+- [SPEC] daemon sleeps: burned segment at service
+- [SYS] trace: stale heap fades
+- [PROC] audit: table misroutes; silent block
+- [SPEC] warning: muted gate spools
+- [SYS] notice: checksum decays near stuttering timer
+- [PROC] panic: daemon scrapes under wrong snapshot
+- [SPEC] cursor desyncs without wake
+- [SYS] empty thread calcifies; with no path
+- [PROC] lock unthreads in the cold block
+- [SPEC] handle waits beyond null frame
+- [SYS] frozen mutex restarts without stack
+- [PROC] syslog: snapshot corrupts (hollow device)
+- [SPEC] daemon trembles: dead audit at timer
+- [SYS] trace: closed descriptor reaps
+- [PROC] audit: stack fractures; dark pointer
+- [SPEC] warning: grey address folds
+- [SYS] notice: record mutates near latent port
+- [PROC] panic: context glitches under tainted shadow
+- [SPEC] kernel rattles with no label
+- [SYS] black line rebinds; in soft lock
+- [PROC] watchdog whispers in the unnamed pipe
+- [SPEC] scheduler loops beyond unwritten sector
+- [SYS] static route echoes without segment
+- [PROC] syslog: allocator drifts (ghost cursor)
+- [SPEC] daemon hangs: corrupt channel at queue
+- [SYS] trace: leaking shadow thins
+- [PROC] audit: buffer slips; unbound buffer
+- [SPEC] warning: unsorted cache flickers
+- [SYS] notice: linker hums near unread node
+- [PROC] panic: signal starves under brittle device
+- [SPEC] router sheds in safe mode
+- [SYS] hungry module stutters; at the edge
+- [PROC] collector stalls in the drifting log
+- [SPEC] monitor bleeds beyond encrypted socket
+- [SYS] foreign page sleeps without log
+- [PROC] syslog: process fades (unmapped index)
+- [SPEC] daemon misroutes: burned queue at route
+- [SYS] trace: stale clock spools
+- [PROC] audit: branch decays; silent audit
+- [SPEC] warning: muted snapshot scrapes
+- [SYS] notice: module desyncs near stuttering pointer
+- [PROC] panic: ring calcifies under wrong lock
+- [SPEC] bus unthreads beneath the table
+- [SYS] empty lock waits; under static
+- [PROC] socket restarts in the cold driver
+- [SPEC] pipe corrupts beyond null trace
+- [SYS] frozen segment trembles without service
+- [PROC] syslog: stdout reaps (hollow heap)
+- [SPEC] daemon fractures: dead table at block
+- [SYS] trace: closed gate folds
+- [PROC] audit: timer mutates; dark driver
+- [SPEC] warning: grey daemon glitches
+- [SYS] notice: page rattles near latent record
+- [PROC] panic: thread rebinds under tainted signal
+- [SPEC] inode whispers without wake
+- [SYS] black frame loops; with no path
+- [PROC] frame echoes in the unnamed mutex
+- [SPEC] signal drifts beyond unwritten device
+- [SYS] static audit hangs without timer
+- [PROC] syslog: vector thins (ghost descriptor)
+- [SPEC] daemon slips: corrupt stack at pointer
+- [SYS] trace: leaking address flickers
+- [PROC] audit: port hums; unbound handle
+- [SPEC] warning: unsorted context starves
+- [SYS] notice: cursor sheds near unread service
+- [PROC] panic: line stutters under brittle address
+- [SPEC] lock stalls with no label
+- [SYS] hungry sector bleeds; in soft lock
+- [PROC] context sleeps in the drifting route
+- [SPEC] snapshot fades beyond encrypted cursor
+- [SYS] foreign channel misroutes without queue
+- [PROC] syslog: audit spools (unmapped shadow)
+- [SPEC] daemon decays: burned buffer at buffer
+- [SYS] trace: stale cache scrapes
+- [PROC] audit: node desyncs; silent port
+- [SPEC] warning: muted signal calcifies
+- [SYS] notice: kernel unthreads near stuttering handle
+- [PROC] panic: module waits under wrong heap
+- [SPEC] watchdog restarts in safe mode
+- [SYS] empty socket corrupts; at the edge
+- [PROC] init trembles in the cold page
+- [SPEC] allocator reaps beyond null index
+- [SYS] frozen queue fractures without route
+- [PROC] syslog: reaper folds (hollow clock)
+- [SPEC] daemon mutates: dead branch at audit
+- [SYS] trace: closed snapshot glitches
+- [PROC] audit: pointer rattles; dark table
+- [SPEC] warning: grey ring rebinds
+- [SYS] notice: router whispers near latent packet
+- [PROC] panic: lock loops under tainted socket
+- [SPEC] collector echoes beneath the table
+- [SYS] black trace drifts; under static
+- [PROC] thread hangs in the unnamed segment
+- [SPEC] process thins beyond unwritten heap
+- [SYS] static table slips without block
+- [PROC] syslog: parent flickers (ghost gate)
+- [SPEC] daemon hums: corrupt timer at driver
+- [SYS] trace: leaking daemon starves
+- [PROC] audit: record sheds; unbound page
+- [SPEC] warning: unsorted thread stutters
+- [SYS] notice: bus stalls near unread block
+- [PROC] panic: frame bleeds under brittle line
+- [SPEC] socket sleeps without wake
+- [SYS] hungry device fades; with no path
+- [PROC] stdin misroutes in the drifting audit
+- [SPEC] stdout spools beyond encrypted descriptor
+- [SYS] foreign stack decays without pointer
+- [PROC] syslog: cache scrapes (unmapped address)
+- [SPEC] daemon desyncs: burned port at handle
+- [SYS] trace: stale context calcifies
+- [PROC] audit: service unthreads; silent pipe
+- [SPEC] warning: muted line waits
+- [SYS] notice: inode restarts near stuttering pipe
+- [PROC] panic: sector corrupts under wrong daemon
+- [SPEC] frame trembles with no label
+- [SYS] empty cursor reaps; in soft lock
+- [PROC] interrupt fractures in the cold channel
+- [SPEC] vector folds beyond null shadow
+- [SYS] frozen buffer mutates without buffer
+- [PROC] syslog: entropy glitches (hollow cache)
+- [SPEC] daemon rattles: dead node at port
+- [SYS] trace: closed signal rebinds
+- [PROC] audit: handle whispers; dark record
+- [SPEC] warning: grey module loops
+- [SYS] notice: lock echoes near latent log
+- [PROC] panic: socket drifts under tainted clock
+- [SPEC] context hangs in safe mode
+- [SYS] black index thins; at the edge
+- [PROC] shadow slips in the unnamed queue
+- [SPEC] audit flickers beyond unwritten clock
+- [SYS] static branch hums without audit
+- [PROC] syslog: log starves (ghost snapshot)
+- [SPEC] daemon sheds: corrupt pointer at table
+- [SYS] trace: leaking ring stutters
+- [PROC] audit: packet stalls; unbound branch
+- [SPEC] warning: unsorted lock bleeds
+- [SYS] notice: watchdog sleeps near unread driver
+- [PROC] panic: trace fades under brittle cursor
+- [SPEC] init misroutes beneath the table
+- [SYS] hungry heap spools; under static
+- [PROC] syslog decays in the drifting table
+- [SPEC] reaper scrapes beyond encrypted gate
+- [SYS] foreign timer desyncs without driver
+- [PROC] syslog: loader calcifies (unmapped daemon)
+- [SPEC] daemon unthreads: burned record at page
+- [SYS] trace: stale thread waits
+- [PROC] audit: block restarts; silent channel
+- [SPEC] warning: muted frame corrupts
+- [SYS] notice: collector trembles near stuttering mutex
+- [PROC] panic: device reaps under wrong frame
+- [SPEC] thread fractures without wake
+- [SYS] empty descriptor folds; with no path
+- [PROC] child mutates in the cold stack
+- [SPEC] parent glitches beyond null address
+- [SYS] frozen port rattles without handle
+- [PROC] syslog: driver rebinds (hollow context)
+- [SPEC] daemon whispers: dead service at pipe
+- [SYS] trace: closed line loops
+- [PROC] audit: pipe echoes; dark mutex
+- [SPEC] warning: grey sector drifts
+- [SYS] notice: socket hangs near latent route
+- [PROC] panic: cursor thins under tainted ring
+- [SPEC] stdin slips with no label
+- [SYS] black shadow flickers; in soft lock
+- [PROC] stderr hums in the unnamed buffer
+- [SPEC] cache starves beyond unwritten cache
+- [SYS] static node sheds without port
+- [PROC] syslog: heap stutters (ghost signal)
+- [SPEC] daemon stalls: corrupt handle at record
+- [SYS] trace: leaking module bleeds
+- [PROC] audit: log sleeps; unbound packet
+- [SPEC] warning: unsorted socket fades
+- [SYS] notice: frame misroutes near unread page
+- [PROC] panic: index spools under brittle cache
+- [SPEC] interrupt decays in safe mode
+- [SYS] hungry clock scrapes; at the edge
+- [PROC] clock desyncs in the drifting branch
+- [SPEC] entropy calcifies beyond encrypted snapshot
+- [SYS] foreign pointer unthreads without table
+- [PROC] syslog: index waits (unmapped ring)
+- [SPEC] daemon restarts: burned packet at branch
+- [SYS] trace: stale lock corrupts
+- [PROC] audit: driver trembles; silent node
+- [SPEC] warning: muted trace reaps
+- [SYS] notice: context fractures near stuttering segment
+- [PROC] panic: heap folds under wrong descriptor
+- [SPEC] shadow mutates beneath the table
+- [SYS] empty gate glitches; under static
+- [PROC] trace rattles in the cold timer
+- [SPEC] log rebinds beyond null daemon
+- [SYS] frozen record whispers without page
+- [PROC] syslog: ledger loops (hollow thread)
+- [SPEC] daemon echoes: dead block at channel
+- [SYS] trace: closed frame drifts
+- [PROC] audit: mutex hangs; dark stack
+- [SPEC] warning: grey device thins
+- [SYS] notice: init slips near latent audit
+- [PROC] panic: descriptor flickers under tainted trace
+- [SPEC] syslog hums without wake
+- [SYS] black address starves; with no path
+- [PROC] timer sheds in the unnamed port
+- [SPEC] loader stutters beyond unwritten context
+- [SYS] static service stalls without pipe
+- [PROC] syslog: resolver bleeds (ghost line)
+- [SPEC] daemon sleeps: corrupt pipe at mutex
+- [SYS] trace: leaking sector fades
+- [PROC] audit: route misroutes; unbound segment
+- [SPEC] warning: unsorted cursor spools
+- [SYS] notice: thread decays near unread channel
+- [PROC] panic: shadow scrapes under brittle module
+- [SPEC] child desyncs with no label
+- [SYS] hungry cache calcifies; in soft lock
+- [PROC] orphan unthreads in the drifting node
+- [SPEC] driver waits beyond encrypted signal
+- [SYS] foreign handle restarts without record
+- [PROC] syslog: firmware corrupts (unmapped module)
+- [SPEC] daemon trembles: burned log at packet
+- [SYS] trace: stale socket reaps
+- [PROC] audit: page fractures; silent log
+- [SPEC] warning: muted index folds
+- [SYS] notice: stdin mutates near stuttering queue
+- [PROC] panic: clock glitches under wrong context
+- [SPEC] stderr rattles in safe mode
+- [SYS] empty snapshot rebinds; at the edge
+- [PROC] stack whispers in the cold pointer
+- [SPEC] heap loops beyond null ring
+- [SYS] frozen packet echoes without branch
+- [PROC] syslog: sector drifts (hollow lock)
+- [SPEC] daemon hangs: dead driver at node
+- [SYS] trace: closed trace thins
+- [PROC] audit: segment slips; dark service
+- [SPEC] warning: grey heap flickers
+- [SYS] notice: interrupt hums near latent table
+- [PROC] panic: gate starves under tainted gate
+- [SPEC] clock sheds beneath the table
+- [SYS] black daemon stutters; under static
+- [PROC] checksum stalls in the unnamed record
+- [SPEC] index bleeds beyond unwritten thread
+- [SYS] static block sleeps without channel
+- [PROC] syslog: mutex fades (ghost frame)
+- [SPEC] daemon misroutes: corrupt mutex at stack
+- [SYS] trace: leaking device spools
+- [PROC] audit: audit decays; unbound timer
+- [SPEC] warning: unsorted descriptor scrapes
+- [SYS] notice: shadow desyncs near unread stack
+- [PROC] panic: address calcifies under brittle index
+- [SPEC] trace unthreads without wake
+- [SYS] hungry context waits; with no path
+- [PROC] record restarts in the drifting service
+- [SPEC] ledger corrupts beyond encrypted line
+- [SYS] foreign pipe trembles without mutex
+- [PROC] syslog: daemon reaps (unmapped sector)
+- [SPEC] daemon fractures: burned route at segment
+- [SYS] trace: stale cursor folds
+- [PROC] audit: channel mutates; silent queue
+- [SPEC] warning: muted shadow glitches
+- [SYS] notice: syslog rattles near stuttering buffer
+- [PROC] panic: cache rebinds under wrong sector
+- [SPEC] timer whispers with no label
+- [SYS] empty signal loops; in soft lock
+- [PROC] linker echoes in the cold handle
+- [SPEC] resolver drifts beyond null module
+- [SYS] frozen log hangs without packet
+- [PROC] syslog: bridge thins (hollow socket)
+- [SPEC] daemon slips: dead page at log
+- [SYS] trace: closed index flickers
+- [PROC] audit: queue hums; dark route
+- [SPEC] warning: grey clock starves
+- [SYS] notice: child sheds near latent branch
+- [PROC] panic: snapshot stutters under tainted thread
+- [SPEC] orphan stalls in safe mode
+- [SYS] black ring bleeds; at the edge
+- [PROC] module sleeps in the unnamed packet
+- [SPEC] firmware fades beyond unwritten lock
+- [SYS] static driver misroutes without node
+- [PROC] syslog: port spools (ghost trace)
+- [SPEC] daemon decays: corrupt segment at service
+- [SYS] trace: leaking heap scrapes
+- [PROC] audit: table desyncs; unbound block
+- [SPEC] warning: unsorted gate calcifies
+- [SYS] notice: stderr unthreads near unread timer
+- [PROC] panic: daemon waits under brittle snapshot
+- [SPEC] stack restarts beneath the table
+- [SYS] hungry thread corrupts; under static
+- [PROC] page trembles in the drifting block
+- [SPEC] sector reaps beyond encrypted frame
+- [SYS] foreign mutex fractures without stack
+- [PROC] syslog: block folds (unmapped device)
+- [SPEC] daemon mutates: burned audit at timer
+- [SYS] trace: stale descriptor glitches
+- [PROC] audit: stack rattles; silent pointer
+- [SPEC] warning: muted address rebinds
+- [SYS] notice: clock whispers near stuttering port
+- [PROC] panic: context loops under wrong shadow
+- [SPEC] checksum echoes without wake
+- [SYS] empty line drifts; with no path
+- [PROC] cursor hangs in the cold pipe
+- [SPEC] mutex thins beyond null sector
+- [SYS] frozen route slips without segment
+- [PROC] syslog: handle flickers (hollow cursor)
+- [SPEC] daemon hums: dead channel at queue
+- [SYS] trace: closed shadow starves
+- [PROC] audit: buffer sheds; dark buffer
+- [SPEC] warning: grey cache stutters
+- [SYS] notice: trace stalls near latent node
+- [PROC] panic: signal bleeds under tainted device
+- [SPEC] record sleeps with no label
+- [SYS] black module fades; in soft lock
+- [PROC] kernel misroutes in the unnamed log
+- [SPEC] daemon spools beyond unwritten socket
+- [SYS] static page decays without log
+- [PROC] syslog: scheduler scrapes (ghost index)
+- [SPEC] daemon desyncs: corrupt queue at route
+- [SYS] trace: leaking clock calcifies
+- [PROC] audit: branch unthreads; unbound audit
+- [SPEC] warning: unsorted snapshot waits
+- [SYS] notice: timer restarts near unread pointer
+- [PROC] panic: ring corrupts under brittle lock
+- [SPEC] linker trembles in safe mode
+- [SYS] hungry lock reaps; at the edge
+- [PROC] router fractures in the drifting driver
+- [SPEC] bridge folds beyond encrypted trace
+- [SYS] foreign segment mutates without service
+- [PROC] syslog: monitor glitches (unmapped heap)
+- [SPEC] daemon rattles: burned table at block
+- [SYS] trace: stale gate rebinds
+- [PROC] audit: timer whispers; silent driver
+- [SPEC] warning: muted daemon loops
+- [SYS] notice: orphan echoes near stuttering record
+- [PROC] panic: thread drifts under wrong signal
+- [SPEC] module hangs beneath the table
+- [SYS] empty frame thins; under static
+- [PROC] bus slips in the cold mutex
+- [SPEC] port flickers beyond null device
+- [SYS] frozen audit hums without timer
+- [PROC] syslog: pipe starves (hollow descriptor)
+- [SPEC] daemon sheds: dead stack at pointer
+- [SYS] trace: closed address stutters
+- [PROC] audit: port stalls; dark handle
+- [SPEC] warning: grey context bleeds
+- [SYS] notice: stack sleeps near latent service
+- [PROC] panic: line fades under tainted address
+- [SPEC] page misroutes without wake
+- [SYS] black sector spools; with no path
+- [PROC] inode decays in the unnamed route
+- [SPEC] block scrapes beyond unwritten cursor
+- [SYS] static channel desyncs without queue
+- [PROC] syslog: signal calcifies (ghost shadow)
+- [SPEC] daemon unthreads: corrupt buffer at buffer
+- [SYS] trace: leaking cache waits
+- [PROC] audit: node restarts; unbound port
+- [SPEC] warning: unsorted signal corrupts
+- [SYS] notice: checksum trembles near unread handle
+- [PROC] panic: module reaps under brittle heap
+- [SPEC] cursor fractures with no label
+- [SYS] hungry socket folds; in soft lock
+- [PROC] lock mutates in the drifting page
+- [SPEC] handle glitches beyond encrypted index
+- [SYS] foreign queue rattles without route
+- [PROC] syslog: snapshot rebinds (unmapped clock)
+- [SPEC] daemon whispers: burned branch at audit
+- [SYS] trace: stale snapshot loops
+- [PROC] audit: pointer echoes; silent table
+- [SPEC] warning: muted ring drifts
+- [SYS] notice: record hangs near stuttering packet
+- [PROC] panic: lock thins under wrong socket
+- [SPEC] kernel slips in safe mode
+- [SYS] empty trace flickers; at the edge
+- [PROC] watchdog hums in the cold segment
+- [SPEC] scheduler starves beyond null heap
+- [SYS] frozen table sheds without block
+- [PROC] syslog: allocator stutters (hollow gate)
+- [SPEC] daemon stalls: dead timer at driver
+- [SYS] trace: closed daemon bleeds
+- [PROC] audit: record sleeps; dark page
+- [SPEC] warning: grey thread fades
+- [SYS] notice: linker misroutes near latent block
+- [PROC] panic: frame spools under tainted line
+- [SPEC] router decays beneath the table
+- [SYS] black device scrapes; under static
+- [PROC] collector desyncs in the unnamed audit
+- [SPEC] monitor calcifies beyond unwritten descriptor
+- [SYS] static stack unthreads without pointer
+- [PROC] syslog: process waits (ghost address)
+- [SPEC] daemon restarts: corrupt port at handle
+- [SYS] trace: leaking context corrupts
+- [PROC] audit: service trembles; unbound pipe
+- [SPEC] warning: unsorted line reaps
+- [SYS] notice: module fractures near unread pipe
+- [PROC] panic: sector folds under brittle daemon
+- [SPEC] bus mutates without wake
+- [SYS] hungry cursor glitches; with no path
+- [PROC] socket rattles in the drifting channel
+- [SPEC] pipe rebinds beyond encrypted shadow
+- [SYS] foreign buffer whispers without buffer
+- [PROC] syslog: stdout loops (unmapped cache)
+- [SPEC] daemon echoes: burned node at port
+- [SYS] trace: stale signal drifts
+- [PROC] audit: handle hangs; silent record
+- [SPEC] warning: muted module thins
+- [SYS] notice: page slips near stuttering log
+- [PROC] panic: socket flickers under wrong clock
+- [SPEC] inode hums with no label
+- [SYS] empty index starves; in soft lock
+- [PROC] frame sheds in the cold queue
+- [SPEC] signal stutters beyond null clock
+- [SYS] frozen branch stalls without audit
+- [PROC] syslog: vector bleeds (hollow snapshot)
+- [SPEC] daemon sleeps: dead pointer at table
+- [SYS] trace: closed ring fades
+- [PROC] audit: packet misroutes; dark branch
+- [SPEC] warning: grey lock spools
+- [SYS] notice: cursor decays near latent driver
+- [PROC] panic: trace scrapes under tainted cursor
+- [SPEC] lock desyncs in safe mode
+- [SYS] black heap calcifies; at the edge
+- [PROC] context unthreads in the unnamed table
+- [SPEC] snapshot waits beyond unwritten gate
+- [SYS] static timer restarts without driver
+- [PROC] syslog: audit corrupts (ghost daemon)
+- [SPEC] daemon trembles: corrupt record at page
+- [SYS] trace: leaking thread reaps
+- [PROC] audit: block fractures; unbound channel
+- [SPEC] warning: unsorted frame folds
+- [SYS] notice: kernel mutates near unread mutex
+- [PROC] panic: device glitches under brittle frame
+- [SPEC] watchdog rattles beneath the table
+- [SYS] hungry descriptor rebinds; under static
+- [PROC] init whispers in the drifting stack
+- [SPEC] allocator loops beyond encrypted address
+- [SYS] foreign port echoes without handle
+- [PROC] syslog: reaper drifts (unmapped context)
+- [SPEC] daemon hangs: burned service at pipe
+- [SYS] trace: stale line thins
+- [PROC] audit: pipe slips; silent mutex
+- [SPEC] warning: muted sector flickers
+- [SYS] notice: router hums near stuttering route
+- [PROC] panic: cursor starves under wrong ring
+- [SPEC] collector sheds without wake
+- [SYS] empty shadow stutters; with no path
+- [PROC] thread stalls in the cold buffer
+- [SPEC] process bleeds beyond null cache
+- [SYS] frozen node sleeps without port
+- [PROC] syslog: parent fades (hollow signal)
+- [SPEC] daemon misroutes: dead handle at record
+- [SYS] trace: closed module spools
+- [PROC] audit: log decays; dark packet
+- [SPEC] warning: grey socket scrapes
+- [SYS] notice: bus desyncs near latent page
+- [PROC] panic: index calcifies under tainted cache
+- [SPEC] socket unthreads with no label
+- [SYS] black clock waits; in soft lock
+- [PROC] stdin restarts in the unnamed branch
+- [SPEC] stdout corrupts beyond unwritten snapshot
+- [SYS] static pointer trembles without table
+- [PROC] syslog: cache reaps (ghost ring)
+- [SPEC] daemon fractures: corrupt packet at branch
+- [SYS] trace: leaking lock folds
+- [PROC] audit: driver mutates; unbound node
+- [SPEC] warning: unsorted trace glitches
+- [SYS] notice: inode rattles near unread segment
+- [PROC] panic: heap rebinds under brittle descriptor
+- [SPEC] frame whispers in safe mode
+- [SYS] hungry gate loops; at the edge
+- [PROC] interrupt echoes in the drifting timer
+- [SPEC] vector drifts beyond encrypted daemon
+- [SYS] foreign record hangs without page
+- [PROC] syslog: entropy thins (unmapped thread)
+- [SPEC] daemon slips: burned block at channel
+- [SYS] trace: stale frame flickers
+- [PROC] audit: mutex hums; silent stack
+- [SPEC] warning: muted device starves
+- [SYS] notice: lock sheds near stuttering audit
+- [PROC] panic: descriptor stutters under wrong trace
+- [SPEC] context stalls beneath the table
+- [SYS] empty address bleeds; under static
+- [PROC] shadow sleeps in the cold port
+- [SPEC] audit fades beyond null context
+- [SYS] frozen service misroutes without pipe
+- [PROC] syslog: log spools (hollow line)
+- [SPEC] daemon decays: dead pipe at mutex
+- [SYS] trace: closed sector scrapes
+- [PROC] audit: route desyncs; dark segment
+- [SPEC] warning: grey cursor calcifies
+- [SYS] notice: watchdog unthreads near latent channel
+- [PROC] panic: shadow waits under tainted module
+- [SPEC] init restarts without wake
+- [SYS] black cache corrupts; with no path
+- [PROC] syslog trembles in the unnamed node
+- [SPEC] reaper reaps beyond unwritten signal
+- [SYS] static handle fractures without record
+- [PROC] syslog: loader folds (ghost module)
+- [SPEC] daemon mutates: corrupt log at packet
+- [SYS] trace: leaking socket glitches
+- [PROC] audit: page rattles; unbound log
+- [SPEC] warning: unsorted index rebinds
+- [SYS] notice: collector whispers near unread queue
+- [PROC] panic: clock loops under brittle context
+- [SPEC] thread echoes with no label
+- [SYS] hungry snapshot drifts; in soft lock
+- [PROC] child hangs in the drifting pointer
+- [SPEC] parent thins beyond encrypted ring
+- [SYS] foreign packet slips without branch
+- [PROC] syslog: driver flickers (unmapped lock)
+- [SPEC] daemon hums: burned driver at node
+- [SYS] trace: stale trace starves
+- [PROC] audit: segment sheds; silent service
+- [SPEC] warning: muted heap stutters
+- [SYS] notice: socket stalls near stuttering table
+- [PROC] panic: gate bleeds under wrong gate
+- [SPEC] stdin sleeps in safe mode
+- [SYS] empty daemon fades; at the edge
+- [PROC] stderr misroutes in the cold record
+- [SPEC] cache spools beyond null thread
+- [SYS] frozen block decays without channel
+- [PROC] syslog: heap scrapes (hollow frame)
+- [SPEC] daemon desyncs: dead mutex at stack
+- [SYS] trace: closed device calcifies
+- [PROC] audit: audit unthreads; dark timer
+- [SPEC] warning: grey descriptor waits
+- [SYS] notice: frame restarts near latent stack
+- [PROC] panic: address corrupts under tainted index
+- [SPEC] interrupt trembles beneath the table
+- [SYS] black context reaps; under static
+- [PROC] clock fractures in the unnamed service
+- [SPEC] entropy folds beyond unwritten line
+- [SYS] static pipe mutates without mutex
+- [PROC] syslog: index glitches (ghost sector)
+- [SPEC] daemon rattles: corrupt route at segment
+- [SYS] trace: leaking cursor rebinds
+- [PROC] audit: channel whispers; unbound queue
+- [SPEC] warning: unsorted shadow loops
+- [SYS] notice: context echoes near unread buffer
+- [PROC] panic: cache drifts under brittle sector
+- [SPEC] shadow hangs without wake
+- [SYS] hungry signal thins; with no path
+- [PROC] trace slips in the drifting handle
+- [SPEC] log flickers beyond encrypted module
+- [SYS] foreign log hums without packet
+- [PROC] syslog: ledger starves (unmapped socket)
+- [SPEC] daemon sheds: burned page at log
+- [SYS] trace: stale index stutters
+- [PROC] audit: queue stalls; silent route
+- [SPEC] warning: muted clock bleeds
+- [SYS] notice: init sleeps near stuttering branch
+- [PROC] panic: snapshot fades under wrong thread
+- [SPEC] syslog misroutes with no label
+- [SYS] empty ring spools; in soft lock
+- [PROC] timer decays in the cold packet
+- [SPEC] loader scrapes beyond null lock
+- [SYS] frozen driver desyncs without node
+- [PROC] syslog: resolver calcifies (hollow trace)
+- [SPEC] daemon unthreads: dead segment at service
+- [SYS] trace: closed heap waits
+- [PROC] audit: table restarts; dark block
+- [SPEC] warning: grey gate corrupts
+- [SYS] notice: thread trembles near latent timer
+- [PROC] panic: daemon reaps under tainted snapshot
+- [SPEC] child fractures in safe mode
+- [SYS] black thread folds; at the edge
+- [PROC] orphan mutates in the unnamed block
+- [SPEC] driver glitches beyond unwritten frame
+- [SYS] static mutex rattles without stack
+- [PROC] syslog: firmware rebinds (ghost device)
+- [SPEC] daemon whispers: corrupt audit at timer
+- [SYS] trace: leaking descriptor loops
+- [PROC] audit: stack echoes; unbound pointer
+- [SPEC] warning: unsorted address drifts
+- [SYS] notice: stdin hangs near unread port
+- [PROC] panic: context thins under brittle shadow
+- [SPEC] stderr slips beneath the table
+- [SYS] hungry line flickers; under static
+- [PROC] stack hums in the drifting pipe
+- [SPEC] heap starves beyond encrypted sector
+- [SYS] foreign route sheds without segment
+- [PROC] syslog: sector stutters (unmapped cursor)
+- [SPEC] daemon stalls: burned channel at queue
+- [SYS] trace: stale shadow bleeds
+- [PROC] audit: buffer sleeps; silent buffer
+- [SPEC] warning: muted cache fades
+- [SYS] notice: interrupt misroutes near stuttering node
+- [PROC] panic: signal spools under wrong device
+- [SPEC] clock decays without wake
+- [SYS] empty module scrapes; with no path
+- [PROC] checksum desyncs in the cold log
+- [SPEC] index calcifies beyond null socket
+- [SYS] frozen page unthreads without log
+- [PROC] syslog: mutex waits (hollow index)
+- [SPEC] daemon restarts: dead queue at route
+- [SYS] trace: closed clock corrupts
+- [PROC] audit: branch trembles; dark audit
+- [SPEC] warning: grey snapshot reaps
+- [SYS] notice: shadow fractures near latent pointer
+- [PROC] panic: ring folds under tainted lock
+- [SPEC] trace mutates with no label
+- [SYS] black lock glitches; in soft lock
+- [PROC] record rattles in the unnamed driver
+- [SPEC] ledger rebinds beyond unwritten trace
+- [SYS] static segment whispers without service
+- [PROC] syslog: daemon loops (ghost heap)
+- [SPEC] daemon echoes: corrupt table at block
+- [SYS] trace: leaking gate drifts
+- [PROC] audit: timer hangs; unbound driver
+- [SPEC] warning: unsorted daemon thins
+- [SYS] notice: syslog slips near unread record
+- [PROC] panic: thread flickers under brittle signal
+- [SPEC] timer hums in safe mode
+- [SYS] hungry frame starves; at the edge
+- [PROC] linker sheds in the drifting mutex
+- [SPEC] resolver stutters beyond encrypted device
+- [SYS] foreign audit stalls without timer
+- [PROC] syslog: bridge bleeds (unmapped descriptor)

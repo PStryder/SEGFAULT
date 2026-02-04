@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
 from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -24,6 +25,9 @@ app = FastAPI(title="SEGFAULT")
 
 logger = logging.getLogger(__name__)
 
+SPECTATOR_SEND_TIMEOUT = 1.0
+FLAVOR_CHANNELS = {"proc", "spec", "sys"}
+
 persistence: SqlitePersistence | None = None
 engine: TickEngine | None = None
 
@@ -34,6 +38,15 @@ chat_clients_lock = asyncio.Lock()
 # Spectator WS connections by shard id
 spectator_clients: Dict[str, set[WebSocket]] = {}
 spectator_clients_lock = asyncio.Lock()
+
+
+@dataclass
+class ShardBroadcaster:
+    queue: asyncio.Queue[Dict[str, object]]
+    task: asyncio.Task
+
+
+spectator_broadcasters: Dict[str, ShardBroadcaster] = {}
 
 # Leaderboard cache (delayed/batched updates)
 leaderboard_cache: Dict[str, object] = {"data": [], "timestamp": 0}
@@ -53,6 +66,9 @@ def _get_persistence() -> SqlitePersistence:
 async def _startup() -> None:
     global persistence, engine
     persistence = SqlitePersistence(settings.db_path)
+    if persistence.flavor_count() == 0:
+        inserted = persistence.seed_flavor_from_markdown("segfault/lore/flavor.md")
+        logger.info("Seeded %s flavor lines", inserted)
     engine = TickEngine(
         persistence,
         seed=settings.random_seed,
@@ -67,27 +83,69 @@ async def tick_loop() -> None:
     game_engine = _get_engine()
     while True:
         game_engine.tick_once()
-        # broadcast spectator snapshots
+        # enqueue spectator snapshots (per-shard broadcasters drop stale frames)
         async with spectator_clients_lock:
-            shard_clients = [(sid, list(clients)) for sid, clients in spectator_clients.items()]
-        for shard_id, clients in shard_clients:
+            shard_queues = {
+                shard_id: broadcaster.queue
+                for shard_id, broadcaster in spectator_broadcasters.items()
+            }
+        for shard_id, queue in shard_queues.items():
             state = game_engine.render_spectator_view(shard_id)
-            stale: List[WebSocket] = []
-            for ws in clients:
-                try:
-                    await ws.send_json(state)
-                except Exception:
-                    logger.exception("Failed to send spectator update")
-                    stale.append(ws)
-            if stale:
-                async with spectator_clients_lock:
-                    live_clients = spectator_clients.get(shard_id)
-                    if live_clients:
-                        for ws in stale:
-                            live_clients.discard(ws)
-                        if not live_clients:
-                            spectator_clients.pop(shard_id, None)
+            if not state:
+                continue
+            _queue_latest(queue, state)
         await asyncio.sleep(settings.tick_seconds)
+
+
+def _queue_latest(queue: asyncio.Queue[Dict[str, object]], state: Dict[str, object]) -> None:
+    try:
+        queue.put_nowait(state)
+    except asyncio.QueueFull:
+        try:
+            queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        try:
+            queue.put_nowait(state)
+        except asyncio.QueueFull:
+            pass
+
+
+async def _send_spectator_state(ws: WebSocket, state: Dict[str, object]) -> bool:
+    try:
+        await asyncio.wait_for(ws.send_json(state), timeout=SPECTATOR_SEND_TIMEOUT)
+        return True
+    except Exception:
+        logger.exception("Failed to send spectator update")
+        return False
+
+
+async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[Dict[str, object]]) -> None:
+    while True:
+        try:
+            state = await queue.get()
+        except asyncio.CancelledError:
+            break
+        async with spectator_clients_lock:
+            clients = list(spectator_clients.get(shard_id, set()))
+        if not clients:
+            continue
+        results = await asyncio.gather(
+            *(_send_spectator_state(ws, state) for ws in clients),
+            return_exceptions=True,
+        )
+        stale = [ws for ws, ok in zip(clients, results) if ok is not True]
+        if stale:
+            async with spectator_clients_lock:
+                live_clients = spectator_clients.get(shard_id)
+                if live_clients:
+                    for ws in stale:
+                        live_clients.discard(ws)
+                    if not live_clients:
+                        spectator_clients.pop(shard_id, None)
+                        broadcaster = spectator_broadcasters.pop(shard_id, None)
+                        if broadcaster:
+                            broadcaster.task.cancel()
 
 
 @app.post("/process/join", response_model=JoinResponse)
@@ -132,6 +190,24 @@ def process_info() -> Dict[str, object]:
     return PUBLIC_DOCS
 
 
+@app.get("/flavor/random")
+def flavor_random(channel: str | None = None) -> Response | Dict[str, str]:
+    store = _get_persistence()
+    if channel:
+        channel = channel.lower()
+        if channel not in FLAVOR_CHANNELS:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid channel")
+        text = store.random_flavor(channel)
+        if not text:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        return {"text": text, "channel": channel}
+    entry = store.random_flavor_entry()
+    if not entry:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    text, entry_channel = entry
+    return {"text": text, "channel": entry_channel}
+
+
 @app.get("/spectate/shards")
 def list_shards() -> List[Dict]:
     game_engine = _get_engine()
@@ -170,6 +246,10 @@ async def spectate_ws(ws: WebSocket, shard_id: str) -> None:
     await ws.accept()
     async with spectator_clients_lock:
         spectator_clients.setdefault(shard_id, set()).add(ws)
+        if shard_id not in spectator_broadcasters:
+            queue: asyncio.Queue[Dict[str, object]] = asyncio.Queue(maxsize=1)
+            task = asyncio.create_task(_broadcast_shard(shard_id, queue))
+            spectator_broadcasters[shard_id] = ShardBroadcaster(queue=queue, task=task)
     try:
         while True:
             try:
@@ -186,6 +266,9 @@ async def spectate_ws(ws: WebSocket, shard_id: str) -> None:
                 clients.discard(ws)
                 if not clients:
                     spectator_clients.pop(shard_id, None)
+                    broadcaster = spectator_broadcasters.pop(shard_id, None)
+                    if broadcaster:
+                        broadcaster.task.cancel()
 
 
 @app.websocket("/chat/ws")

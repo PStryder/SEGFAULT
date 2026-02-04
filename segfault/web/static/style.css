@@ -21,3 +21,10 @@ button, input {
   padding: 8px;
   border: 1px solid #333;
 }
+#flavor {
+  margin: 8px 0 12px;
+  color: #888;
+  font-style: italic;
+  max-width: 720px;
+  white-space: pre-wrap;
+}
