@@ -12,7 +12,11 @@ def _env_bool(value: str, default: bool = True) -> bool:
 
 def _parse_origins(value: str | None) -> list[str]:
     if not value:
-        return ["*"]
+        return [
+            "https://segfault.pstryder.com",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
@@ -31,6 +35,11 @@ class Settings:
     random_seed: int = int(os.getenv("SEGFAULT_RANDOM_SEED", "42"))
     enable_tick_loop: bool = _env_bool(os.getenv("SEGFAULT_ENABLE_TICK_LOOP", "1"))
     cors_origins: list[str] = _parse_origins(os.getenv("SEGFAULT_CORS_ORIGINS"))
+    cmd_rate_limit: int = int(os.getenv("SEGFAULT_CMD_RATE_LIMIT", "20"))
+    cmd_rate_window_seconds: float = float(os.getenv("SEGFAULT_CMD_RATE_WINDOW", "1.0"))
+    max_total_processes: int = int(os.getenv("SEGFAULT_MAX_TOTAL_PROCESSES", "1000"))
+    token_ttl_seconds: int = int(os.getenv("SEGFAULT_TOKEN_TTL_SECONDS", "3600"))
+    api_key: str | None = os.getenv("SEGFAULT_API_KEY")
 
 
 settings = Settings()

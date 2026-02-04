@@ -70,14 +70,16 @@ class TickEngine:
         seed: int = 42,
         min_active_processes: int = 1,
         empty_shard_ticks: int = 12,
+        max_total_processes: int | None = None,
     ) -> None:
         self.persistence = persistence
         self.rng = random.Random(seed)
         self.min_active_processes = min_active_processes
         self.empty_shard_ticks = empty_shard_ticks
+        self.max_total_processes = max_total_processes
         self.shards: Dict[str, ShardState] = {}
         self.process_to_shard: Dict[str, str] = {}
-        self.session_tokens: Dict[str, str] = {}
+        self.session_tokens: Dict[str, Tuple[str, int]] = {}
         self.process_events: Dict[str, List[Event]] = {}
 
     def create_shard(self) -> ShardState:
@@ -96,8 +98,11 @@ class TickEngine:
         self.shards[shard_id] = shard
         return shard
 
-    def join_process(self) -> Tuple[str, str]:
+    def join_process(self) -> Tuple[str, str] | None:
         """Spawn a new process in a shard and return its session token and process id."""
+        if self.max_total_processes is not None:
+            if self._total_processes() >= self.max_total_processes:
+                return None
         shard = self._find_or_create_shard()
         process_id = str(uuid.uuid4())
         call_sign = self._random_call_sign()
@@ -110,8 +115,19 @@ class TickEngine:
         self.process_to_shard[process_id] = shard.shard_id
         self.process_events[process_id] = []
         token = str(uuid.uuid4())
-        self.session_tokens[token] = process_id
+        self.session_tokens[token] = (process_id, int(time.time()))
         return token, process_id
+
+    def resolve_token(self, token: str, ttl_seconds: int | None = None) -> str | None:
+        entry = self.session_tokens.get(token)
+        if not entry:
+            return None
+        process_id, issued_at = entry
+        if ttl_seconds and ttl_seconds > 0:
+            if int(time.time()) - issued_at > ttl_seconds:
+                self.session_tokens.pop(token, None)
+                return None
+        return process_id
 
     def buffer_command(self, process_id: str, cmd: Command) -> None:
         """Buffer the last valid command for a process (broadcasts are immediate)."""
@@ -166,6 +182,8 @@ class TickEngine:
         else:
             shard.empty_ticks = 0
         if shard.empty_ticks >= self.empty_shard_ticks:
+            for proc in list(shard.processes.values()):
+                self._remove_process(shard, proc)
             self.shards.pop(shard.shard_id, None)
 
     def render_process_view(self, process_id: str) -> Dict:
@@ -234,6 +252,9 @@ class TickEngine:
             if len(shard.processes) < MAX_PROCESSES_PER_SHARD:
                 return shard
         return self.create_shard()
+
+    def _total_processes(self) -> int:
+        return sum(len(shard.processes) for shard in self.shards.values())
 
     def _get_shard_for_process(self, process_id: str) -> Optional[ShardState]:
         shard_id = self.process_to_shard.get(process_id)
@@ -512,7 +533,7 @@ class TickEngine:
         self.process_to_shard.pop(proc.process_id, None)
         self.process_events.pop(proc.process_id, None)
         for token, pid in list(self.session_tokens.items()):
-            if pid == proc.process_id:
+            if pid[0] == proc.process_id:
                 self.session_tokens.pop(token, None)
 
     def _transfer_process(self, proc: ProcessState) -> None:

@@ -54,6 +54,7 @@
   <script>
     const DEFAULT_API_BASE = 'https://segfault.pstryder.com';
     const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
+    const API_KEY = window.API_KEY || '';
     const apiUrl = new URL(API_BASE_URL);
     const wsScheme = apiUrl.protocol === 'https:' ? 'wss' : 'ws';
     const wsBase = `${wsScheme}://${apiUrl.host}`;
@@ -63,7 +64,9 @@
     let chatWs = null;
 
     async function loadShards() {
-      const res = await fetch(`${API_BASE_URL}/spectate/shards`);
+      const res = await fetch(`${API_BASE_URL}/spectate/shards`, {
+        headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
+      });
       const data = await res.json();
       const container = document.getElementById('shards');
       container.innerHTML = '';
@@ -79,9 +82,13 @@
     function connectShard(id) {
       shardId = id;
       if (ws) ws.close();
-      ws = new WebSocket(`${wsBase}/spectate/ws/${shardId}`);
+      const wsUrl = API_KEY
+        ? `${wsBase}/spectate/ws/${shardId}?key=${encodeURIComponent(API_KEY)}`
+        : `${wsBase}/spectate/ws/${shardId}`;
+      ws = new WebSocket(wsUrl);
       ws.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
+        if (data.type === 'ping') return;
         const gridText = data.grid.map(row => row.join(' ')).join('\n');
         document.getElementById('grid').textContent = gridText;
         if (data.watchdog) {
@@ -106,9 +113,13 @@
     }
 
     function connectChat() {
-      chatWs = new WebSocket(`${wsBase}/chat/ws`);
+      const chatUrl = API_KEY
+        ? `${wsBase}/chat/ws?key=${encodeURIComponent(API_KEY)}`
+        : `${wsBase}/chat/ws`;
+      chatWs = new WebSocket(chatUrl);
       chatWs.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
+        if (data.type === 'ping') return;
         const log = document.getElementById('chatlog');
         const line = document.createElement('div');
         line.textContent = `${data.author}: ${data.message}`;
@@ -127,7 +138,9 @@
 
     async function refreshFlavor() {
       try {
-        const res = await fetch(`${API_BASE_URL}/flavor/random?channel=spec`);
+        const res = await fetch(`${API_BASE_URL}/flavor/random?channel=spec`, {
+          headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
+        });
         if (!res.ok || res.status === 204) return;
         const data = await res.json();
         if (data && data.text) {

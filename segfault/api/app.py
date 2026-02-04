@@ -5,9 +5,9 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -58,6 +58,10 @@ spectator_broadcasters: Dict[str, ShardBroadcaster] = {}
 
 # Leaderboard cache (delayed/batched updates)
 leaderboard_cache: Dict[str, object] = {"data": [], "timestamp": 0}
+leaderboard_lock = asyncio.Lock()
+engine_lock = asyncio.Lock()
+rate_limit_lock = asyncio.Lock()
+cmd_rate: Dict[str, Tuple[int, float]] = {}
 
 
 def _get_engine() -> TickEngine:
@@ -68,6 +72,38 @@ def _get_engine() -> TickEngine:
 def _get_persistence() -> SqlitePersistence:
     assert persistence is not None
     return persistence
+
+
+def _extract_token(token: str | None, authorization: str | None) -> str | None:
+    if authorization:
+        parts = authorization.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            return parts[1]
+        return authorization.strip()
+    return token
+
+
+def _check_api_key(provided: str | None) -> None:
+    if settings.api_key and provided != settings.api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+
+
+async def _check_rate_limit(token: str) -> None:
+    limit = settings.cmd_rate_limit
+    if limit <= 0:
+        return
+    now = time.monotonic()
+    async with rate_limit_lock:
+        count, start = cmd_rate.get(token, (0, now))
+        if now - start >= settings.cmd_rate_window_seconds:
+            count = 0
+            start = now
+        count += 1
+        cmd_rate[token] = (count, start)
+        if count > limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limit exceeded"
+            )
 
 
 @app.on_event("startup")
@@ -83,6 +119,7 @@ async def _startup() -> None:
         seed=settings.random_seed,
         min_active_processes=settings.min_active_processes,
         empty_shard_ticks=settings.empty_shard_ticks,
+        max_total_processes=settings.max_total_processes,
     )
     engine.create_shard()
     if settings.enable_tick_loop:
@@ -100,15 +137,21 @@ async def _shutdown() -> None:
 async def tick_loop() -> None:
     game_engine = _get_engine()
     while True:
-        game_engine.tick_once()
         # enqueue spectator snapshots (per-shard broadcasters drop stale frames)
         async with spectator_clients_lock:
             shard_queues = {
                 shard_id: broadcaster.queue
                 for shard_id, broadcaster in spectator_broadcasters.items()
             }
+        shard_ids = list(shard_queues.keys())
+        async with engine_lock:
+            game_engine.tick_once()
+            shard_states = {
+                shard_id: game_engine.render_spectator_view(shard_id)
+                for shard_id in shard_ids
+            }
         for shard_id, queue in shard_queues.items():
-            state = game_engine.render_spectator_view(shard_id)
+            state = shard_states.get(shard_id)
             if not state:
                 continue
             _queue_latest(queue, state)
@@ -136,6 +179,15 @@ async def _send_spectator_state(ws: WebSocket, state: Dict[str, object]) -> bool
     except Exception:
         logger.exception("Failed to send spectator update")
         return False
+
+
+async def _ws_keepalive(ws: WebSocket, interval: float = 30.0) -> None:
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            await ws.send_json({"type": "ping"})
+        except Exception:
+            break
 
 
 async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[Dict[str, object]]) -> None:
@@ -167,32 +219,57 @@ async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[Dict[str, object]
 
 
 @app.post("/process/join", response_model=JoinResponse)
-def join_process() -> JoinResponse:
+async def join_process(x_api_key: str | None = Header(default=None)) -> JoinResponse:
+    _check_api_key(x_api_key)
     game_engine = _get_engine()
-    token, process_id = game_engine.join_process()
+    async with engine_lock:
+        result = game_engine.join_process()
+    if not result:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Server full")
+    token, process_id = result
     return JoinResponse(token=token, process_id=process_id)
 
 
 @app.get("/process/state", response_model=ProcessStateResponse)
-def process_state(token: str) -> ProcessStateResponse:
-    game_engine = _get_engine()
-    process_id = game_engine.session_tokens.get(token)
-    if not process_id:
+async def process_state(
+    token: str | None = None,
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+) -> ProcessStateResponse:
+    _check_api_key(x_api_key)
+    resolved = _extract_token(token, authorization)
+    if not resolved:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    data = game_engine.render_process_view(process_id)
+    game_engine = _get_engine()
+    async with engine_lock:
+        process_id = game_engine.resolve_token(resolved, settings.token_ttl_seconds)
+        if not process_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        data = game_engine.render_process_view(process_id)
     return ProcessStateResponse(**data)
 
 
 @app.post("/process/cmd")
-def process_cmd(token: str, req: CommandRequest) -> Dict[str, str]:
-    game_engine = _get_engine()
-    process_id = game_engine.session_tokens.get(token)
-    if not process_id:
+async def process_cmd(
+    req: CommandRequest,
+    token: str | None = None,
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+) -> Dict[str, str]:
+    _check_api_key(x_api_key)
+    resolved = _extract_token(token, authorization)
+    if not resolved:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    cmd = req.cmd.upper()
-    if cmd not in {"MOVE", "BUFFER", "BROADCAST", "IDLE", "SAY"}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid command")
-    game_engine.buffer_command(process_id, command_request_to_command(req))
+    await _check_rate_limit(resolved)
+    game_engine = _get_engine()
+    async with engine_lock:
+        process_id = game_engine.resolve_token(resolved, settings.token_ttl_seconds)
+        if not process_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        cmd = req.cmd.upper()
+        if cmd not in {"MOVE", "BUFFER", "BROADCAST", "IDLE", "SAY"}:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid command")
+        game_engine.buffer_command(process_id, command_request_to_command(req))
     return {"status": "ok"}
 
 
@@ -204,12 +281,15 @@ def command_request_to_command(req: CommandRequest):
 
 
 @app.get("/process/info")
-def process_info() -> Dict[str, object]:
+async def process_info() -> Dict[str, object]:
     return PUBLIC_DOCS
 
 
 @app.get("/flavor/random")
-def flavor_random(channel: str | None = None) -> Response | Dict[str, str]:
+async def flavor_random(
+    channel: str | None = None, x_api_key: str | None = Header(default=None)
+) -> Response | Dict[str, str]:
+    _check_api_key(x_api_key)
     store = _get_persistence()
     if channel:
         channel = channel.lower()
@@ -226,40 +306,50 @@ def flavor_random(channel: str | None = None) -> Response | Dict[str, str]:
 
 
 @app.get("/spectate/shards")
-def list_shards() -> List[Dict]:
+async def list_shards(x_api_key: str | None = Header(default=None)) -> List[Dict]:
+    _check_api_key(x_api_key)
     game_engine = _get_engine()
+    async with engine_lock:
+        shards = list(game_engine.shards.values())
     return [
         {
             "shard_id": shard.shard_id,
             "process_count": len(shard.processes),
             "tick": shard.tick,
         }
-        for shard in game_engine.shards.values()
+        for shard in shards
     ]
 
 
 @app.get("/spectate/shard/{shard_id}", response_model=SpectatorShardState)
-def spectate_shard(shard_id: str) -> SpectatorShardState:
+async def spectate_shard(
+    shard_id: str, x_api_key: str | None = Header(default=None)
+) -> SpectatorShardState:
+    _check_api_key(x_api_key)
     game_engine = _get_engine()
-    data = game_engine.render_spectator_view(shard_id)
+    async with engine_lock:
+        data = game_engine.render_spectator_view(shard_id)
     return SpectatorShardState(**data)
 
 
 @app.get("/leaderboard")
-def leaderboard() -> Response | Dict[str, object]:
+async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response | Dict[str, object]:
+    _check_api_key(x_api_key)
     store = _get_persistence()
-    now = int(time.time())
-    if now - int(leaderboard_cache["timestamp"]) > 30:
-        leaderboard_cache["data"] = store.leaderboard()
-        leaderboard_cache["timestamp"] = now
-    entries = leaderboard_cache["data"]
+    async with leaderboard_lock:
+        now = int(time.time())
+        if now - int(leaderboard_cache["timestamp"]) > 30:
+            leaderboard_cache["data"] = store.leaderboard()
+            leaderboard_cache["timestamp"] = now
+        entries = leaderboard_cache["data"]
     if not entries:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     return {"entries": entries}
 
 
 @app.websocket("/spectate/ws/{shard_id}")
-async def spectate_ws(ws: WebSocket, shard_id: str) -> None:
+async def spectate_ws(ws: WebSocket, shard_id: str, key: str | None = None) -> None:
+    _check_api_key(key)
     await ws.accept()
     async with spectator_clients_lock:
         spectator_clients.setdefault(shard_id, set()).add(ws)
@@ -289,10 +379,12 @@ async def spectate_ws(ws: WebSocket, shard_id: str) -> None:
 
 
 @app.websocket("/chat/ws")
-async def chat_ws(ws: WebSocket) -> None:
+async def chat_ws(ws: WebSocket, key: str | None = None) -> None:
+    _check_api_key(key)
     await ws.accept()
     async with chat_clients_lock:
         chat_clients.add(ws)
+    keepalive = asyncio.create_task(_ws_keepalive(ws))
     try:
         while True:
             try:
@@ -322,6 +414,7 @@ async def chat_ws(ws: WebSocket) -> None:
                     for client in stale:
                         chat_clients.discard(client)
     finally:
+        keepalive.cancel()
         async with chat_clients_lock:
             chat_clients.discard(ws)
 

@@ -11,7 +11,11 @@ Response:
 ```
 
 ## Perception
-`GET /process/state?token=...`
+`GET /process/state`
+
+Provide token as:
+- `Authorization: Bearer <token>` (preferred)
+- or `?token=...` query parameter
 
 Response:
 ```
@@ -19,7 +23,7 @@ Response:
 ```
 
 ## Commands
-`POST /process/cmd?token=...`
+`POST /process/cmd`
 
 Body:
 ```
@@ -29,3 +33,7 @@ Body:
 Notes:
 - Only the last valid command before a tick resolves is executed.
 - `BROADCAST` and `SAY` are immediate and do not consume the buffered action.
+
+## Optional API Key
+If the server sets `SEGFAULT_API_KEY`, include:
+`X-API-Key: <key>`

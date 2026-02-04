@@ -49,6 +49,7 @@
   <script>
     const DEFAULT_API_BASE = 'https://segfault.pstryder.com';
     const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
+    const API_KEY = window.API_KEY || '';
     const stateEl = document.getElementById('status');
     const tickEl = document.getElementById('tick');
     const modeEl = document.getElementById('mode');
@@ -106,7 +107,9 @@
 
     async function refreshFlavor() {
       try {
-        const res = await fetch(`${API_BASE_URL}/flavor/random?channel=proc`);
+        const res = await fetch(`${API_BASE_URL}/flavor/random?channel=proc`, {
+          headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
+        });
         if (!res.ok || res.status === 204) return;
         const data = await res.json();
         if (data && data.text) {
@@ -118,7 +121,10 @@
     }
 
     async function join() {
-      const res = await fetch(`${API_BASE_URL}/process/join`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/process/join`, {
+        method: 'POST',
+        headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
+      });
       const data = await res.json();
       token = data.token;
       stateEl.textContent = 'Connected';
@@ -126,7 +132,9 @@
 
     async function poll() {
       if (!token) return;
-      const res = await fetch(`${API_BASE_URL}/process/state?token=${token}`);
+      const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE_URL}/process/state`, { headers });
       const data = await res.json();
       tickEl.textContent = data.tick || 0;
       gridEl.textContent = data.grid || '';
@@ -155,9 +163,11 @@
       const raw = inputEl.value;
       const payload = parseCommand(raw);
       if (!payload) return;
-      await fetch(`${API_BASE_URL}/process/cmd?token=${token}`, {
+      const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE_URL}/process/cmd`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload)
       });
       inputEl.value = '';

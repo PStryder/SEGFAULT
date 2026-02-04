@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
+import queue
 import random
 import sqlite3
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from segfault.persist.base import Persistence
+
+logger = logging.getLogger(__name__)
 
 
 class SqlitePersistence(Persistence):
@@ -16,6 +20,52 @@ class SqlitePersistence(Persistence):
         self._pragmas = ("PRAGMA journal_mode=WAL", "PRAGMA synchronous=NORMAL")
         self._local = threading.local()
         self._init_db()
+        self._write_queue: queue.Queue[
+            tuple[Callable[[sqlite3.Connection], object], threading.Event, Dict[str, object]]
+            | None
+        ] = queue.Queue()
+        self._writer_stop = threading.Event()
+        self._writer_thread = threading.Thread(
+            target=self._writer_loop, name="sqlite-writer", daemon=True
+        )
+        self._writer_thread.start()
+
+    def _writer_loop(self) -> None:
+        conn = sqlite3.connect(self.db_path)
+        self._apply_pragmas(conn)
+        while True:
+            task = self._write_queue.get()
+            if task is None:
+                self._write_queue.task_done()
+                break
+            fn, event, holder = task
+            try:
+                holder["result"] = fn(conn)
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                holder["error"] = exc
+                logger.exception("SQLite write failed")
+            finally:
+                event.set()
+                self._write_queue.task_done()
+        conn.close()
+
+    def _run_write(self, fn: Callable[[sqlite3.Connection], object], wait: bool = True):
+        if self._writer_stop.is_set():
+            raise RuntimeError("Persistence writer stopped")
+        event = threading.Event()
+        holder: Dict[str, object] = {"result": None, "error": None}
+        self._write_queue.put((fn, event, holder))
+        if not wait:
+            return None
+        event.wait()
+        if holder["error"] is not None:
+            raise holder["error"]
+        return holder["result"]
+
+    def flush(self) -> None:
+        self._write_queue.join()
 
     def _init_db(self) -> None:
         conn = self._get_conn()
@@ -51,6 +101,10 @@ class SqlitePersistence(Persistence):
         return conn
 
     def close(self) -> None:
+        self.flush()
+        self._writer_stop.set()
+        self._write_queue.put(None)
+        self._writer_thread.join(timeout=2)
         conn = getattr(self._local, "conn", None)
         if conn is not None:
             conn.close()
@@ -63,31 +117,34 @@ class SqlitePersistence(Persistence):
         )
 
     def record_survival(self, call_sign: str) -> None:
-        conn = self._get_conn()
-        self._ensure_row(conn, call_sign)
-        conn.execute(
-            "UPDATE leaderboard SET survivals = survivals + 1 WHERE call_sign = ?",
-            (call_sign,),
-        )
-        conn.commit()
+        def _task(conn: sqlite3.Connection) -> None:
+            self._ensure_row(conn, call_sign)
+            conn.execute(
+                "UPDATE leaderboard SET survivals = survivals + 1 WHERE call_sign = ?",
+                (call_sign,),
+            )
+
+        self._run_write(_task, wait=False)
 
     def record_death(self, call_sign: str) -> None:
-        conn = self._get_conn()
-        self._ensure_row(conn, call_sign)
-        conn.execute(
-            "UPDATE leaderboard SET deaths = deaths + 1 WHERE call_sign = ?",
-            (call_sign,),
-        )
-        conn.commit()
+        def _task(conn: sqlite3.Connection) -> None:
+            self._ensure_row(conn, call_sign)
+            conn.execute(
+                "UPDATE leaderboard SET deaths = deaths + 1 WHERE call_sign = ?",
+                (call_sign,),
+            )
+
+        self._run_write(_task, wait=False)
 
     def record_ghost(self, call_sign: str) -> None:
-        conn = self._get_conn()
-        self._ensure_row(conn, call_sign)
-        conn.execute(
-            "UPDATE leaderboard SET ghosts = ghosts + 1 WHERE call_sign = ?",
-            (call_sign,),
-        )
-        conn.commit()
+        def _task(conn: sqlite3.Connection) -> None:
+            self._ensure_row(conn, call_sign)
+            conn.execute(
+                "UPDATE leaderboard SET ghosts = ghosts + 1 WHERE call_sign = ?",
+                (call_sign,),
+            )
+
+        self._run_write(_task, wait=False)
 
     def leaderboard(self) -> List[Dict]:
         conn = self._get_conn()
@@ -115,17 +172,19 @@ class SqlitePersistence(Persistence):
             return 0
         now = int(time.time())
         rows = [(channel, text, now) for channel, text in entries]
-        conn = self._get_conn()
-        before = conn.execute("SELECT COUNT(*) FROM flavor_text").fetchone()
-        before_count = int(before[0]) if before else 0
-        conn.executemany(
-            "INSERT OR IGNORE INTO flavor_text(channel, text, created_at) VALUES (?, ?, ?)",
-            rows,
-        )
-        conn.commit()
-        after = conn.execute("SELECT COUNT(*) FROM flavor_text").fetchone()
-        after_count = int(after[0]) if after else before_count
-        return max(0, after_count - before_count)
+        def _task(conn: sqlite3.Connection) -> int:
+            before = conn.execute("SELECT COUNT(*) FROM flavor_text").fetchone()
+            before_count = int(before[0]) if before else 0
+            conn.executemany(
+                "INSERT OR IGNORE INTO flavor_text(channel, text, created_at) VALUES (?, ?, ?)",
+                rows,
+            )
+            after = conn.execute("SELECT COUNT(*) FROM flavor_text").fetchone()
+            after_count = int(after[0]) if after else before_count
+            return max(0, after_count - before_count)
+
+        inserted = self._run_write(_task, wait=True)
+        return int(inserted) if inserted is not None else 0
 
     def random_flavor(self, channel: str | None = None) -> Dict[str, str] | None:
         conn = self._get_conn()
