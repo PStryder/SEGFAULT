@@ -9,6 +9,7 @@
   <h1>SPECTATOR VIEW</h1>
   <div id="shards"></div>
   <pre id="grid"></pre>
+  <pre id="watchdog"></pre>
   <div id="chat">
     <h3>Global Chat</h3>
     <div id="chatlog"></div>
@@ -43,6 +44,10 @@
         const data = JSON.parse(evt.data);
         const gridText = data.grid.map(row => row.join(' ')).join('\n');
         document.getElementById('grid').textContent = gridText;
+        if (data.watchdog) {
+          document.getElementById('watchdog').textContent =
+            `Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`;
+        }
       };
     }
 

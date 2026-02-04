@@ -102,18 +102,18 @@ def segment_intersection_blocks(seg: Edge, wall_edge: Edge) -> bool:
     o3 = orientation(q1, q2, p1)
     o4 = orientation(q1, q2, p2)
 
-    # General case: proper intersection (not colinear)
-    if o1 != 0 and o2 != 0 and o3 != 0 and o4 != 0:
-        if o1 != o2 and o3 != o4:
-            return True
-        return False
-
-    # Colinear or touching cases
+    # Colinear - check overlap length > 0
     if o1 == 0 and o2 == 0 and o3 == 0 and o4 == 0:
-        # Colinear - check overlap length > 0
         return colinear_overlap(p1, p2, q1, q2)
 
-    # Touching at endpoints is allowed -> no block
+    # Proper crossing blocks
+    if o1 != 0 and o2 != 0 and o3 != 0 and o4 != 0 and o1 != o2 and o3 != o4:
+        return True
+
+    # Touching at a wall endpoint does not block
+    if on_segment(p1, p2, q1) or on_segment(p1, p2, q2):
+        return False
+
     return False
 
 
@@ -135,10 +135,18 @@ def colinear_overlap(p1: Point, p2: Point, q1: Point, q2: Point) -> bool:
 
 def orientation(a: Point, b: Point, c: Point) -> int:
     """Return orientation of (a,b,c): 0 colinear, 1 clockwise, 2 counterclockwise."""
-    val = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1])
+    val = (b[1] - a[1]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[1] - a[1])
     if abs(val) < EPS:
         return 0
     return 1 if val > 0 else 2
+
+
+def on_segment(a: Point, b: Point, c: Point) -> bool:
+    """Return True if point c lies on segment ab (inclusive)."""
+    if min(a[0], b[0]) - EPS <= c[0] <= max(a[0], b[0]) + EPS and min(a[1], b[1]) - EPS <= c[1] <= max(a[1], b[1]) + EPS:
+        # Colinear check
+        return orientation(a, b, c) == 0
+    return False
 
 
 def diagonal_legal(a: Tile, b: Tile, walls: Set[WallEdge]) -> bool:
@@ -224,28 +232,13 @@ def edge_slots() -> List[WallEdge]:
 
 def adjacent_edge_slots(edge: WallEdge) -> List[WallEdge]:
     """Return adjacent edge slots sharing a vertex with the given edge."""
-    seg = edge.segment()
-    (x1, y1), (x2, y2) = seg
+    (x1, y1), (x2, y2) = edge.segment()
+    vertices = {(x1, y1), (x2, y2)}
     candidates: Set[WallEdge] = set()
-    for vx, vy in [(x1, y1), (x2, y2)]:
-        # vertical edges touching vertex
-        for dx in (-1, 0):
-            ex = vx + dx
-            if 0 <= ex <= GRID_SIZE - 1 and 0 <= vy <= GRID_SIZE - 1:
-                # vertical edge at x=ex, from y=vy to y=vy+1
-                if ex >= 0 and ex <= GRID_SIZE - 1 and 0 <= vy < GRID_SIZE:
-                    # edge separates tiles (ex-1,vy) and (ex,vy)
-                    a = (ex - 1, vy)
-                    b = (ex, vy)
-                    if in_bounds(a) and in_bounds(b):
-                        candidates.add(WallEdge(a, b).canonical())
-        # horizontal edges touching vertex
-        for dy in (-1, 0):
-            ey = vy + dy
-            if 0 <= ey <= GRID_SIZE - 1 and 0 <= vx <= GRID_SIZE - 1:
-                a = (vx, ey - 1)
-                b = (vx, ey)
-                if in_bounds(a) and in_bounds(b):
-                    candidates.add(WallEdge(a, b).canonical())
-    candidates.discard(edge.canonical())
+    for candidate in edge_slots():
+        if candidate == edge.canonical():
+            continue
+        c1, c2 = candidate.segment()
+        if c1 in vertices or c2 in vertices:
+            candidates.add(candidate)
     return list(candidates)

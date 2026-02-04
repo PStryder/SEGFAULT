@@ -20,6 +20,7 @@ class CommandType(str, Enum):
     BUFFER = "BUFFER"
     BROADCAST = "BROADCAST"
     IDLE = "IDLE"
+    SAY = "SAY"
 
 
 @dataclass(frozen=True)

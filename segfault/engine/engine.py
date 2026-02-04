@@ -6,7 +6,13 @@ import uuid
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from segfault.common.constants import FIBONACCI_ESCALATION, GRID_SIZE, MAX_PROCESSES_PER_SHARD
+from segfault.common.constants import (
+    FIBONACCI_ESCALATION,
+    GRID_SIZE,
+    MAX_PROCESSES_PER_SHARD,
+    QUIET_TICKS_WARNING,
+    WATCHDOG_COUNTDOWN,
+)
 from segfault.common.types import Broadcast, Command, CommandType, GateType, Tile
 from segfault.engine.drift import drift_gates, drift_walls
 from segfault.engine.geometry import (
@@ -100,9 +106,13 @@ class TickEngine:
         proc = shard.processes.get(process_id)
         if not proc or not proc.alive:
             return
-        proc.buffered = cmd
         if cmd.cmd == CommandType.BROADCAST and cmd.arg:
-            self._handle_broadcast(shard, process_id, cmd.arg)
+            self._handle_broadcast(shard, process_id, cmd.arg[:256])
+            return
+        if cmd.cmd == CommandType.SAY and cmd.arg:
+            self._handle_local_chat(shard, process_id, cmd.arg[:256])
+            return
+        proc.buffered = cmd
 
     def tick_once(self) -> None:
         for shard in list(self.shards.values()):
@@ -110,7 +120,6 @@ class TickEngine:
 
     def _tick_shard(self, shard: ShardState) -> None:
         shard.tick += 1
-        shard.watchdog.restored_this_tick = False
         # Liveness restored if any process starts adjacent to defragger
         if any(
             _is_adjacent(p.pos, shard.defragger.pos, shard)
@@ -132,6 +141,7 @@ class TickEngine:
         self._advance_watchdog(shard)
         # Clear broadcasts for this tick window
         shard.broadcasts.clear()
+        shard.watchdog.restored_this_tick = False
         # Shard shutdown invariant
         if len(shard.processes) < self.min_active_processes:
             shard.empty_ticks += 1
@@ -241,7 +251,7 @@ class TickEngine:
 
     def _intent_to_destination(self, shard: ShardState, proc: ProcessState) -> Optional[Tile]:
         cmd = proc.buffered
-        if cmd.cmd in (CommandType.IDLE, CommandType.BROADCAST):
+        if cmd.cmd in (CommandType.IDLE, CommandType.BROADCAST, CommandType.SAY):
             return None
         if cmd.cmd not in (CommandType.MOVE, CommandType.BUFFER):
             return None
@@ -389,12 +399,22 @@ class TickEngine:
     def _handle_broadcast(self, shard: ShardState, process_id: str, message: str) -> None:
         ts = int(time.time() * 1000)
         shard.broadcasts.append(Broadcast(process_id=process_id, message=message, timestamp_ms=ts))
-        event = Event(kind="broadcast", message=message, timestamp_ms=ts)
+        event = Event(kind="broadcast", message=f"[BCAST] {message}", timestamp_ms=ts)
         self.spectator_events.append(event)
         for pid in shard.processes:
             self.process_events.setdefault(pid, []).append(event)
         # Watchdog reset condition: broadcast
         shard.watchdog = self._reset_watchdog_on_liveness(shard, reason="broadcast")
+
+    def _handle_local_chat(self, shard: ShardState, process_id: str, message: str) -> None:
+        sender = shard.processes.get(process_id)
+        if not sender:
+            return
+        ts = int(time.time() * 1000)
+        event = Event(kind="local", message=f"LOCAL LINK: PROC: {message}", timestamp_ms=ts)
+        for pid, proc in shard.processes.items():
+            if pid == process_id or _is_adjacent(sender.pos, proc.pos, shard):
+                self.process_events.setdefault(pid, []).append(event)
 
     def _kill_process(self, shard: ShardState, proc: ProcessState) -> None:
         proc.alive = False
@@ -478,9 +498,18 @@ class TickEngine:
 
     def _reset_watchdog_on_liveness(self, shard: ShardState, reason: str) -> WatchdogState:
         if reason in {"broadcast", "kill", "adjacent", "los"}:
+            if shard.watchdog.quiet_ticks >= 6 or shard.watchdog.countdown > 0 or shard.watchdog.active:
+                self._emit_global_event(shard, "[OK]: LIVENESS RESTORED.")
             shard.watchdog = WatchdogState()
             shard.watchdog.restored_this_tick = True
         return shard.watchdog
+
+    def _emit_global_event(self, shard: ShardState, message: str) -> None:
+        ts = int(time.time() * 1000)
+        event = Event(kind="system", message=message, timestamp_ms=ts)
+        self.spectator_events.append(event)
+        for pid in shard.processes:
+            self.process_events.setdefault(pid, []).append(event)
 
     def _advance_watchdog(self, shard: ShardState) -> None:
         wd = shard.watchdog
@@ -490,13 +519,24 @@ class TickEngine:
             wd.bonus_step = min(wd.bonus_step + 1, len(FIBONACCI_ESCALATION) - 1)
             return
         wd.quiet_ticks += 1
-        if wd.quiet_ticks == 6:
-            wd.countdown = 3
+        if wd.quiet_ticks == QUIET_TICKS_WARNING:
+            wd.countdown = WATCHDOG_COUNTDOWN
+            self._emit_global_event(shard, "[WARN]: SCHEDULER LIVENESS DEGRADED.")
+            self._emit_global_event(
+                shard,
+                f"[WARN]: DEADLOCK MITIGATION IN: {wd.countdown:02d} TICKS",
+            )
         elif wd.countdown > 0:
             wd.countdown -= 1
+            self._emit_global_event(
+                shard,
+                f"[WARN]: DEADLOCK MITIGATION IN: {wd.countdown:02d} TICKS",
+            )
             if wd.countdown == 0:
                 wd.active = True
                 wd.bonus_step = 0
+                self._emit_global_event(shard, "[CRITICAL]: WATCHDOG TRIGGERED.")
+                self._emit_global_event(shard, "[CRITICAL]: EXECUTION REBALANCE APPLIED.")
 
 
 def render_process_grid(shard: ShardState, proc: ProcessState) -> str:

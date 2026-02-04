@@ -29,25 +29,17 @@ def drift_walls(shard: ShardState, rng: random.Random) -> None:
     rng.shuffle(wall_ids)
     selected = sorted(wall_ids[:move_count])
 
-    desired: Dict[int, Optional[WallEdge]] = {}
     for wall_id in selected:
         current = shard.walls[wall_id]
         candidates = adjacent_edge_slots(current)
         rng.shuffle(candidates)
-        desired_edge = candidates[0] if candidates else None
-        desired[wall_id] = desired_edge
-
-    for wall_id in selected:
-        target = desired.get(wall_id)
-        if target is None:
-            continue
-        current = shard.walls[wall_id]
-        # If target already occupied by a wall, skip (deterministic: lower ID wins)
-        if target in shard.walls_set:
-            continue
-        # Tentatively move and validate constraints
-        shard.walls[wall_id] = target
-        if not _drift_constraints_ok(shard):
+        for target in candidates:
+            # If target already occupied by a wall, skip (deterministic: lower ID wins)
+            if target in shard.walls_set:
+                continue
+            shard.walls[wall_id] = target
+            if _drift_constraints_ok(shard):
+                break
             shard.walls[wall_id] = current
 
 

@@ -81,6 +81,7 @@ These choices are consistent with `SEGFAULT.md` but weren’t fully specified:
 - **BUFFER movement** is resolved as a single tick with a randomized path; collisions are enforced on the final destination.
 - **Spectator wall rendering** is a coarse marker in the 20×20 grid; edge‑accurate rendering is a UI enhancement for later.
 - **Spectator inspection UI** (click-to-inspect) is not yet implemented in the minimal web UI.
+- **Local chat** is supported via a `SAY <message>` command and is delivered only to adjacent processes at send time.
 
 If any assumption should change, update `SEGFAULT.md` and the engine implementation.
 

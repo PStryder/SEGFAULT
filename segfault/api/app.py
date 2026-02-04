@@ -76,7 +76,7 @@ def process_cmd(token: str, req: CommandRequest) -> Dict[str, str]:
     if not process_id:
         return {"status": "invalid"}
     cmd = req.cmd.upper()
-    if cmd not in {"MOVE", "BUFFER", "BROADCAST", "IDLE"}:
+    if cmd not in {"MOVE", "BUFFER", "BROADCAST", "IDLE", "SAY"}:
         return {"status": "invalid"}
     engine.buffer_command(process_id, CommandRequestToCommand(req))
     return {"status": "ok"}
@@ -134,6 +134,7 @@ async def chat_ws(ws: WebSocket) -> None:
     try:
         while True:
             msg = await ws.receive_text()
+            msg = msg[:256]
             payload = {
                 "author": "spectator",
                 "message": msg,
