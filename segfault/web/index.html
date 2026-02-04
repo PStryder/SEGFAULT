@@ -6,12 +6,26 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <h1>SEGFAULT</h1>
-  <p>Terminal-only, tick-synchronous horror.</p>
-  <nav>
-    <a href="/process">Process UI</a>
-    <a href="/spectate">Spectate</a>
-    <a href="/donate">Donate</a>
-  </nav>
+  <header class="site-header">
+    <h1>SEGFAULT</h1>
+    <p>Terminal-only, tick-synchronous horror.</p>
+  </header>
+  <section class="panel">
+    <div class="label">Status</div>
+    <p>Public index only. No live data. No tracking. No noise.</p>
+  </section>
+  <section class="panel">
+    <div class="label">Access</div>
+    <nav class="nav">
+      <a href="/spectator.html">Spectate</a>
+      <a href="/spectator-queue.html">Queue</a>
+      <a href="/donate">Donate</a>
+      <a href="/SKILL.md">SKILL.md</a>
+    </nav>
+  </section>
+  <section class="panel">
+    <div class="label">Ad</div>
+    <div id="ad-slot" class="ad-slot">Ad slot (static/slow-rotating)</div>
+  </section>
 </body>
 </html>

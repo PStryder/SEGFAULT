@@ -2,109 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta http-equiv="refresh" content="0; url=/spectator.html" />
   <title>SEGFAULT - Spectator</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <h1>SPECTATOR VIEW</h1>
-  <div id="shards"></div>
-  <pre id="grid"></pre>
-  <pre id="watchdog"></pre>
-  <pre id="saylog"></pre>
-  <div id="flavor"></div>
-  <div id="chat">
-    <h3>Global Chat</h3>
-    <div id="chatlog"></div>
-    <input id="chatinput" placeholder="say something" />
-    <button id="chatsend">Send</button>
-  </div>
-
-  <script>
-    let shardId = null;
-    let ws = null;
-    let chatWs = null;
-    const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
-
-    async function loadShards() {
-      const res = await fetch('/spectate/shards');
-      const data = await res.json();
-      const container = document.getElementById('shards');
-      container.innerHTML = '';
-      data.forEach(s => {
-        const btn = document.createElement('button');
-        btn.textContent = `Shard ${s.shard_id.slice(0,6)} (${s.process_count})`;
-        btn.onclick = () => connectShard(s.shard_id);
-        container.appendChild(btn);
-      });
-      if (!shardId && data.length) connectShard(data[0].shard_id);
-    }
-
-    function connectShard(id) {
-      shardId = id;
-      if (ws) ws.close();
-      ws = new WebSocket(`${wsScheme}://${location.host}/spectate/ws/${shardId}`);
-      ws.onmessage = (evt) => {
-        const data = JSON.parse(evt.data);
-        const gridText = data.grid.map(row => row.join(' ')).join('\n');
-        document.getElementById('grid').textContent = gridText;
-        if (data.watchdog) {
-          document.getElementById('watchdog').textContent =
-            `Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`;
-        }
-        const saylog = document.getElementById('saylog');
-        if (data.say_events && data.say_events.length) {
-          const lines = data.say_events.map(ev => {
-            const sender = ev.sender_pos ? `(${ev.sender_pos[0]},${ev.sender_pos[1]})` : '(?)';
-            const recipients = (ev.recipients || [])
-              .map(r => r.pos ? `(${r.pos[0]},${r.pos[1]})` : '(?)')
-              .join(' ');
-            const arrow = recipients ? `-> ${recipients}` : '-> (none)';
-            return `SAY ${sender} ${arrow}: ${ev.message}`;
-          });
-          saylog.textContent = lines.join('\n');
-        } else {
-          saylog.textContent = '';
-        }
-      };
-    }
-
-    function connectChat() {
-      chatWs = new WebSocket(`${wsScheme}://${location.host}/chat/ws`);
-      chatWs.onmessage = (evt) => {
-        const data = JSON.parse(evt.data);
-        const log = document.getElementById('chatlog');
-        const line = document.createElement('div');
-        line.textContent = `${data.author}: ${data.message}`;
-        log.appendChild(line);
-        log.scrollTop = log.scrollHeight;
-      };
-    }
-
-    document.getElementById('chatsend').onclick = () => {
-      const input = document.getElementById('chatinput');
-      if (chatWs && input.value.trim()) {
-        chatWs.send(input.value.trim());
-        input.value = '';
-      }
-    };
-
-    async function refreshFlavor() {
-      try {
-        const res = await fetch('/flavor/random?channel=spec');
-        if (!res.ok || res.status === 204) return;
-        const data = await res.json();
-        if (data && data.text) {
-          document.getElementById('flavor').textContent = data.text;
-        }
-      } catch (err) {
-        // Silent fail
-      }
-    }
-
-    loadShards();
-    connectChat();
-    refreshFlavor();
-    setInterval(refreshFlavor, 7000);
-  </script>
+  <p>Redirecting to spectator view...</p>
 </body>
 </html>

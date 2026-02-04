@@ -10,6 +10,12 @@ def _env_bool(value: str, default: bool = True) -> bool:
     return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
+def _parse_origins(value: str | None) -> list[str]:
+    if not value:
+        return ["*"]
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime settings loaded from environment variables.
@@ -24,6 +30,7 @@ class Settings:
     empty_shard_ticks: int = int(os.getenv("SEGFAULT_EMPTY_SHARD_TICKS", "12"))
     random_seed: int = int(os.getenv("SEGFAULT_RANDOM_SEED", "42"))
     enable_tick_loop: bool = _env_bool(os.getenv("SEGFAULT_ENABLE_TICK_LOOP", "1"))
+    cors_origins: list[str] = _parse_origins(os.getenv("SEGFAULT_CORS_ORIGINS"))
 
 
 settings = Settings()

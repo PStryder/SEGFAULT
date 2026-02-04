@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -23,6 +24,12 @@ from segfault.engine.engine import TickEngine
 from segfault.persist.sqlite import SqlitePersistence
 
 app = FastAPI(title="SEGFAULT")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 logger = logging.getLogger(__name__)
 
@@ -335,7 +342,22 @@ def process_ui() -> FileResponse:
 
 @app.get("/spectate")
 def spectator_ui() -> FileResponse:
-    return FileResponse("segfault/web/spectate.html")
+    return FileResponse("segfault/web/spectator.html")
+
+
+@app.get("/spectator")
+def spectator_ui_alias() -> FileResponse:
+    return FileResponse("segfault/web/spectator.html")
+
+
+@app.get("/spectator/profile")
+def spectator_profile_ui() -> FileResponse:
+    return FileResponse("segfault/web/spectator-profile.html")
+
+
+@app.get("/spectator/queue")
+def spectator_queue_ui() -> FileResponse:
+    return FileResponse("segfault/web/spectator-queue.html")
 
 
 @app.get("/donate")
@@ -346,3 +368,8 @@ def donate_placeholder() -> FileResponse:
 @app.get("/adblock")
 def adblock_placeholder() -> FileResponse:
     return FileResponse("segfault/web/adblock.html")
+
+
+@app.get("/SKILL.md")
+def skill_markdown() -> FileResponse:
+    return FileResponse("segfault/web/SKILL.md", media_type="text/markdown")

@@ -5,26 +5,100 @@
   <title>SEGFAULT - Process</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body>
-  <h1>PROCESS TERMINAL</h1>
-  <div id="status">Not connected</div>
-  <div id="flavor"></div>
-  <pre id="grid"></pre>
-  <pre id="events"></pre>
-  <h2 id="docs-title">SYSTEM NOTICE</h2>
-  <pre id="docs"></pre>
-  <input id="cmd" placeholder="MOVE 8 | BUFFER 2 | BROADCAST hello | SAY hi" />
-  <button id="send">Send</button>
+<body class="process">
+  <header class="site-header">
+    <h1>PROCESS TERMINAL</h1>
+    <div class="status-row">
+      <span id="status">Not connected</span>
+      <span>Tick <span id="tick">0</span></span>
+      <span>Mode <span id="mode">SAY</span></span>
+    </div>
+  </header>
+
+  <section class="process-shell">
+    <div class="column">
+      <div class="panel">
+        <div class="label">Flavor</div>
+        <div id="flavor"></div>
+      </div>
+      <div class="panel">
+        <div class="label" id="docs-title">SYSTEM NOTICE</div>
+        <pre id="docs"></pre>
+      </div>
+    </div>
+    <div class="column">
+      <div class="panel">
+        <div class="label">Shard View</div>
+        <pre id="grid"></pre>
+      </div>
+      <div class="panel">
+        <div class="label">Local Log</div>
+        <pre id="events"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="command-bar">
+    <button id="btn-say" class="active">Say</button>
+    <button id="btn-bcast">Broadcast</button>
+    <button id="btn-move">Move</button>
+    <input id="cmd" placeholder="Say: type a message" />
+    <button id="send">Send</button>
+  </section>
 
   <script>
+    const DEFAULT_API_BASE = 'https://segfault.pstryder.com';
+    const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
+    const stateEl = document.getElementById('status');
+    const tickEl = document.getElementById('tick');
+    const modeEl = document.getElementById('mode');
+    const inputEl = document.getElementById('cmd');
+    const gridEl = document.getElementById('grid');
+    const eventsEl = document.getElementById('events');
+    const docsEl = document.getElementById('docs');
+    const docsTitleEl = document.getElementById('docs-title');
+    const flavorEl = document.getElementById('flavor');
+
     let token = null;
+    let mode = 'SAY';
+
+    const COMMAND_ALIASES = {
+      '/BCAST': 'BROADCAST',
+      '/BROADCAST': 'BROADCAST',
+      'BCAST': 'BROADCAST',
+      'BROADCAST': 'BROADCAST',
+      '/MOVE': 'MOVE',
+      'MOVE': 'MOVE',
+      '/BUFFER': 'BUFFER',
+      'BUFFER': 'BUFFER',
+      '/IDLE': 'IDLE',
+      'IDLE': 'IDLE',
+      '/SAY': 'SAY',
+      'SAY': 'SAY'
+    };
+
+    function setMode(next) {
+      mode = next;
+      modeEl.textContent = next;
+      document.getElementById('btn-say').classList.toggle('active', next === 'SAY');
+      document.getElementById('btn-bcast').classList.toggle('active', next === 'BROADCAST');
+      document.getElementById('btn-move').classList.toggle('active', next === 'MOVE');
+      if (next === 'MOVE') {
+        inputEl.placeholder = 'Move: enter 1-9';
+      } else if (next === 'BROADCAST') {
+        inputEl.placeholder = '/BCAST your message';
+      } else {
+        inputEl.placeholder = 'Say: type a message';
+      }
+    }
+
     async function loadDocs() {
       try {
-        const res = await fetch('/process/info');
+        const res = await fetch(`${API_BASE_URL}/process/info`);
         if (!res.ok) return;
         const data = await res.json();
-        document.getElementById('docs-title').textContent = data.title || 'SYSTEM NOTICE';
-        document.getElementById('docs').textContent = (data.lines || []).join('\n');
+        docsTitleEl.textContent = data.title || 'SYSTEM NOTICE';
+        docsEl.textContent = (data.lines || []).join('\n');
       } catch (err) {
         // No-op: docs are optional
       }
@@ -32,52 +106,87 @@
 
     async function refreshFlavor() {
       try {
-        const res = await fetch('/flavor/random?channel=proc');
+        const res = await fetch(`${API_BASE_URL}/flavor/random?channel=proc`);
         if (!res.ok || res.status === 204) return;
         const data = await res.json();
         if (data && data.text) {
-          document.getElementById('flavor').textContent = data.text;
+          flavorEl.textContent = data.text;
         }
       } catch (err) {
         // Silent fail
       }
     }
+
     async function join() {
-      const res = await fetch('/process/join', { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/process/join`, { method: 'POST' });
       const data = await res.json();
       token = data.token;
-      document.getElementById('status').textContent = 'Connected';
+      stateEl.textContent = 'Connected';
     }
 
     async function poll() {
       if (!token) return;
-      const res = await fetch(`/process/state?token=${token}`);
+      const res = await fetch(`${API_BASE_URL}/process/state?token=${token}`);
       const data = await res.json();
-      document.getElementById('grid').textContent = data.grid || '';
-      document.getElementById('events').textContent = (data.events || [])
-        .map(e => `[${e.kind}] ${e.message}`)
-        .join('\n');
+      tickEl.textContent = data.tick || 0;
+      gridEl.textContent = data.grid || '';
+      eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
+    }
+
+    function parseCommand(raw) {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      const parts = trimmed.split(/\s+/);
+      const head = parts[0].toUpperCase();
+      if (COMMAND_ALIASES[head]) {
+        return { cmd: COMMAND_ALIASES[head], arg: parts.slice(1).join(' ') || null };
+      }
+      if (mode === 'MOVE') {
+        return { cmd: 'MOVE', arg: parts[0] || null };
+      }
+      if (mode === 'BROADCAST') {
+        return { cmd: 'BROADCAST', arg: trimmed };
+      }
+      return { cmd: 'SAY', arg: trimmed };
     }
 
     async function sendCmd() {
       if (!token) return;
-      const input = document.getElementById('cmd').value.trim();
-      if (!input) return;
-      const [cmd, ...rest] = input.split(' ');
-      const arg = rest.join(' ') || null;
-      await fetch('/process/cmd?token=' + token, {
+      const raw = inputEl.value;
+      const payload = parseCommand(raw);
+      if (!payload) return;
+      await fetch(`${API_BASE_URL}/process/cmd?token=${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cmd: cmd, arg: arg })
+        body: JSON.stringify(payload)
       });
-      document.getElementById('cmd').value = '';
+      inputEl.value = '';
+      if (mode !== 'SAY') {
+        setMode('SAY');
+      }
     }
 
     document.getElementById('send').onclick = sendCmd;
-    document.getElementById('cmd').addEventListener('keydown', (e) => {
+    inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') sendCmd();
     });
 
+    document.getElementById('btn-say').onclick = () => {
+      setMode('SAY');
+      inputEl.focus();
+    };
+    document.getElementById('btn-bcast').onclick = () => {
+      setMode('BROADCAST');
+      inputEl.value = '/BCAST ';
+      inputEl.focus();
+    };
+    document.getElementById('btn-move').onclick = () => {
+      setMode('MOVE');
+      inputEl.value = '/MOVE ';
+      inputEl.focus();
+    };
+
+    setMode('SAY');
     join();
     loadDocs();
     refreshFlavor();

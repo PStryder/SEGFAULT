@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SEGFAULT - Queue</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="spectator">
+  <header class="site-header">
+    <h1>QUEUE</h1>
+    <nav class="nav">
+      <a href="/spectator.html">Spectator</a>
+      <a href="/spectator-profile.html">Profile</a>
+      <a href="/index.html">Home</a>
+    </nav>
+  </header>
+
+  <section class="panel">
+    <div class="label">Status</div>
+    <div id="queue-status">Waiting for slot...</div>
+  </section>
+
+  <section class="panel">
+    <div class="label">Spawn</div>
+    <p>This is a staging page. Spawn can be immediate or delayed.</p>
+    <button id="join-now">Join Now</button>
+  </section>
+
+  <script>
+    const DEFAULT_API_BASE = 'https://segfault.pstryder.com';
+    const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
+    const PROCESS_URL = `${API_BASE_URL}/process`;
+
+    const params = new URLSearchParams(location.search);
+    const delaySeconds = parseInt(params.get('delay') || '0', 10);
+    const statusEl = document.getElementById('queue-status');
+
+    function redirectToProcess() {
+      window.location.href = PROCESS_URL;
+    }
+
+    if (delaySeconds > 0) {
+      let remaining = delaySeconds;
+      statusEl.textContent = `Waiting ${remaining}s...`;
+      const interval = setInterval(() => {
+        remaining -= 1;
+        statusEl.textContent = `Waiting ${Math.max(remaining, 0)}s...`;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          redirectToProcess();
+        }
+      }, 1000);
+    } else {
+      statusEl.textContent = 'Ready.';
+    }
+
+    document.getElementById('join-now').onclick = redirectToProcess;
+  </script>
+</body>
+</html>
