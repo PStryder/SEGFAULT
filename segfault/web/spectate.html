@@ -10,6 +10,7 @@
   <div id="shards"></div>
   <pre id="grid"></pre>
   <pre id="watchdog"></pre>
+  <pre id="saylog"></pre>
   <div id="flavor"></div>
   <div id="chat">
     <h3>Global Chat</h3>
@@ -48,6 +49,20 @@
         if (data.watchdog) {
           document.getElementById('watchdog').textContent =
             `Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`;
+        }
+        const saylog = document.getElementById('saylog');
+        if (data.say_events && data.say_events.length) {
+          const lines = data.say_events.map(ev => {
+            const sender = ev.sender_pos ? `(${ev.sender_pos[0]},${ev.sender_pos[1]})` : '(?)';
+            const recipients = (ev.recipients || [])
+              .map(r => r.pos ? `(${r.pos[0]},${r.pos[1]})` : '(?)')
+              .join(' ');
+            const arrow = recipients ? `-> ${recipients}` : '-> (none)';
+            return `SAY ${sender} ${arrow}: ${ev.message}`;
+          });
+          saylog.textContent = lines.join('\n');
+        } else {
+          saylog.textContent = '';
         }
       };
     }

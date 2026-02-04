@@ -25,6 +25,21 @@ class ProcessState:
 
 
 @dataclass
+class SayRecipient:
+    process_id: str
+    pos: Tile
+
+
+@dataclass
+class SayEvent:
+    sender_id: str
+    sender_pos: Tile
+    message: str
+    recipients: List[SayRecipient]
+    timestamp_ms: int
+
+
+@dataclass
 class DefragmenterState:
     pos: Tile
     target_id: Optional[str] = None
@@ -48,6 +63,7 @@ class ShardState:
     processes: Dict[str, ProcessState]
     defragger: DefragmenterState
     broadcasts: List[Broadcast] = field(default_factory=list)
+    say_events: List[SayEvent] = field(default_factory=list)
     tick: int = 0
     watchdog: WatchdogState = field(default_factory=WatchdogState)
     empty_ticks: int = 0

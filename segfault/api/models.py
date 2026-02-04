@@ -34,6 +34,7 @@ class SpectatorShardState(BaseModel):
     gates: List[dict]
     processes: List[dict]
     watchdog: dict
+    say_events: List[dict] = []
 
 
 class ChatMessage(BaseModel):

@@ -26,7 +26,15 @@ from segfault.engine.geometry import (
     wall_blocks,
     WallEdge,
 )
-from segfault.engine.state import DefragmenterState, Gate, ProcessState, ShardState, WatchdogState
+from segfault.engine.state import (
+    DefragmenterState,
+    Gate,
+    ProcessState,
+    SayEvent,
+    SayRecipient,
+    ShardState,
+    WatchdogState,
+)
 from segfault.persist.base import Persistence
 
 DIRECTION_MAP = {
@@ -40,6 +48,9 @@ DIRECTION_MAP = {
     8: (0, 1),
     9: (1, 1),
 }
+
+CHAT_ARTIFACT_PROB = 0.015
+CHAT_ARTIFACTS = ("...", "[STATIC]")
 
 
 @dataclass
@@ -194,7 +205,21 @@ class TickEngine:
                 "active": shard.watchdog.active,
                 "bonus_step": shard.watchdog.bonus_step,
             },
+            "say_events": [
+                {
+                    "sender_id": ev.sender_id,
+                    "sender_pos": ev.sender_pos,
+                    "message": ev.message,
+                    "timestamp_ms": ev.timestamp_ms,
+                    "recipients": [{"id": r.process_id, "pos": r.pos} for r in ev.recipients],
+                }
+                for ev in shard.say_events
+            ],
         }
+
+    def clear_say_events(self) -> None:
+        for shard in self.shards.values():
+            shard.say_events = []
 
     # Internal helpers
 
@@ -426,10 +451,40 @@ class TickEngine:
         if not sender:
             return
         ts = int(time.time() * 1000)
-        event = Event(kind="local", message=f"LOCAL LINK: PROC: {message}", timestamp_ms=ts)
-        for pid, proc in shard.processes.items():
-            if pid == process_id or _is_adjacent(sender.pos, proc.pos, shard):
-                self.process_events.setdefault(pid, []).append(event)
+        recipients = [
+            proc
+            for pid, proc in shard.processes.items()
+            if pid != process_id and proc.alive and _is_adjacent_moore(sender.pos, proc.pos)
+        ]
+        recipients_by_pid = sorted(recipients, key=lambda proc: proc.process_id)
+        recipients_by_spatial = sorted(
+            recipients, key=lambda proc: _spatial_order(sender.pos, proc.pos)
+        )
+        shard.say_events.append(
+            SayEvent(
+                sender_id=process_id,
+                sender_pos=sender.pos,
+                message=message,
+                recipients=[
+                    SayRecipient(process_id=proc.process_id, pos=proc.pos)
+                    for proc in recipients_by_spatial
+                ],
+                timestamp_ms=ts,
+            )
+        )
+        if not recipients_by_pid:
+            return
+        for proc in recipients_by_pid:
+            if self.rng.random() < CHAT_ARTIFACT_PROB:
+                artifact = self.rng.choice(CHAT_ARTIFACTS)
+                self.process_events.setdefault(proc.process_id, []).append(
+                    Event(kind="noise", message=artifact, timestamp_ms=ts)
+                )
+                continue
+            text = f"[ADJACENT: {process_id}] {message}"
+            self.process_events.setdefault(proc.process_id, []).append(
+                Event(kind="local", message=text, timestamp_ms=ts)
+            )
 
     def _kill_process(self, shard: ShardState, proc: ProcessState) -> None:
         proc.alive = False
@@ -679,3 +734,25 @@ def _is_adjacent(a: Tile, b: Tile, shard: ShardState) -> bool:
     if dx + dy == 1:
         return not wall_blocks(a, b, shard.walls_set)
     return diagonal_legal(a, b, shard.walls_set)
+
+
+def _is_adjacent_moore(a: Tile, b: Tile) -> bool:
+    dx = abs(a[0] - b[0])
+    dy = abs(a[1] - b[1])
+    return (dx <= 1 and dy <= 1) and not (dx == 0 and dy == 0)
+
+
+def _spatial_order(a: Tile, b: Tile) -> int:
+    dx = b[0] - a[0]
+    dy = b[1] - a[1]
+    order = {
+        (-1, -1): 1,
+        (0, -1): 2,
+        (1, -1): 3,
+        (-1, 0): 4,
+        (1, 0): 6,
+        (-1, 1): 7,
+        (0, 1): 8,
+        (1, 1): 9,
+    }
+    return order.get((dx, dy), 99)

@@ -28,3 +28,8 @@ button, input {
   max-width: 720px;
   white-space: pre-wrap;
 }
+#saylog {
+  color: #777;
+  max-width: 720px;
+  white-space: pre-wrap;
+}

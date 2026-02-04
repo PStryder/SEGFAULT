@@ -94,6 +94,7 @@ async def tick_loop() -> None:
             if not state:
                 continue
             _queue_latest(queue, state)
+        game_engine.clear_say_events()
         await asyncio.sleep(settings.tick_seconds)
 
 
