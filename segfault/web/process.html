@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SEGFAULT - Process</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <h1>PROCESS TERMINAL</h1>
+  <div id="status">Not connected</div>
+  <pre id="grid"></pre>
+  <pre id="events"></pre>
+  <input id="cmd" placeholder="MOVE 8 | BUFFER 2 | BROADCAST hello" />
+  <button id="send">Send</button>
+
+  <script>
+    let token = null;
+    async function join() {
+      const res = await fetch('/process/join', { method: 'POST' });
+      const data = await res.json();
+      token = data.token;
+      document.getElementById('status').textContent = 'Connected';
+    }
+
+    async function poll() {
+      if (!token) return;
+      const res = await fetch(`/process/state?token=${token}`);
+      const data = await res.json();
+      document.getElementById('grid').textContent = data.grid || '';
+      document.getElementById('events').textContent = (data.events || [])
+        .map(e => `[${e.kind}] ${e.message}`)
+        .join('\n');
+    }
+
+    async function sendCmd() {
+      if (!token) return;
+      const input = document.getElementById('cmd').value.trim();
+      if (!input) return;
+      const [cmd, ...rest] = input.split(' ');
+      const arg = rest.join(' ') || null;
+      await fetch('/process/cmd?token=' + token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: cmd, arg: arg })
+      });
+      document.getElementById('cmd').value = '';
+    }
+
+    document.getElementById('send').onclick = sendCmd;
+    document.getElementById('cmd').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendCmd();
+    });
+
+    join();
+    setInterval(poll, 1000);
+  </script>
+</body>
+</html>
