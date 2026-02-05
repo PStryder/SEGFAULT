@@ -51,6 +51,7 @@ class DefragmenterState:
     target_id: str | None = None
     target_reason: str | None = None  # broadcast | los | watchdog | patrol
     last_los_target_id: str | None = None
+    target_acquired_tick: int | None = None
 
 
 @dataclass

@@ -508,6 +508,15 @@ class TickEngine:
             next_tile = self._defragger_next_step(shard)
             if next_tile is None:
                 break
+            if (
+                shard.defragger.target_reason == "los"
+                and shard.defragger.target_acquired_tick == shard.tick
+                and shard.defragger.target_id
+            ):
+                target = shard.processes.get(shard.defragger.target_id)
+                if target and next_tile == target.pos:
+                    # Give a one-tick warning on initial LOS lock.
+                    break
             shard.defragger.pos = next_tile
             victim = self._process_at(shard, next_tile)
             if victim:
@@ -524,6 +533,7 @@ class TickEngine:
             target_id = sorted(candidates, key=lambda b: b.process_id)[0].process_id
             bonus = self._broadcast_bonus(shard, target_id)
             shard.defragger.target_reason = "broadcast"
+            shard.defragger.target_acquired_tick = None
             return target_id, bonus
         # LOS targeting (lock persists until sprint)
         locked_targets = [p for p in shard.processes.values() if p.los_lock]
@@ -544,6 +554,7 @@ class TickEngine:
                 target = self._round_robin_target(locked_targets, last_id)
             shard.defragger.last_los_target_id = target.process_id
             shard.defragger.target_reason = "los"
+            shard.defragger.target_acquired_tick = None
             return target.process_id, 0
         los_targets = [
             p
@@ -556,6 +567,7 @@ class TickEngine:
             self._reset_watchdog_on_liveness(shard, reason="los")
             shard.defragger.last_los_target_id = target.process_id
             shard.defragger.target_reason = "los"
+            shard.defragger.target_acquired_tick = shard.tick
             return target.process_id, 0
         # Watchdog bonus
         if shard.watchdog.active:
@@ -563,8 +575,10 @@ class TickEngine:
                 min(shard.watchdog.bonus_step, len(FIBONACCI_ESCALATION) - 1)
             ]
             shard.defragger.target_reason = "watchdog"
+            shard.defragger.target_acquired_tick = None
             return None, bonus
         shard.defragger.target_reason = "patrol"
+        shard.defragger.target_acquired_tick = None
         return None, bonus
 
     def _round_robin_target(
