@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass
@@ -372,10 +373,10 @@ async def process_info() -> dict[str, object]:
     return PUBLIC_DOCS
 
 
-@app.get("/flavor/random")
+@app.get("/flavor/random", response_model=None)
 async def flavor_random(
     channel: str | None = None, x_api_key: str | None = Header(default=None)
-) -> Response | dict[str, str]:
+) -> Response:
     _check_api_key(x_api_key)
     store = _get_persistence()
     if channel:
@@ -385,11 +386,11 @@ async def flavor_random(
         entry = store.random_flavor(channel)
         if not entry:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-        return entry
+        return Response(content=json.dumps(entry), media_type="application/json")
     entry = store.random_flavor()
     if not entry:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return entry
+    return Response(content=json.dumps(entry), media_type="application/json")
 
 
 @app.get("/spectate/shards")
@@ -419,8 +420,8 @@ async def spectate_shard(
     return SpectatorShardState(**data)
 
 
-@app.get("/leaderboard")
-async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response | dict[str, object]:
+@app.get("/leaderboard", response_model=None)
+async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response:
     _check_api_key(x_api_key)
     store = _get_persistence()
     async with leaderboard_lock:
@@ -431,7 +432,10 @@ async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response 
         entries = leaderboard_cache["data"]
     if not entries:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return {"entries": entries}
+    return Response(
+        content=json.dumps({"entries": entries}),
+        media_type="application/json",
+    )
 
 
 @app.get("/replays", response_model=dict[str, list[ReplayShardSummary]])
