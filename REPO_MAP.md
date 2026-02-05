@@ -44,6 +44,9 @@ segfault/
 Top level:
 - `SEGFAULT.md` — authoritative design spec
 - `README.md` — setup + architecture + assumptions
+- `Dockerfile` — container build for Fly.io
+- `fly.toml` — Fly.io deployment config
+- `firebase.json` — Firebase hosting config for static UI
 - `pyproject.toml` — deps, tooling
 - `Makefile` — dev/test/lint/format
-- `.env.example` — sample config
+- `.env.example` — sample config

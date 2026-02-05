@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "public": "segfault/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/", "destination": "/index.html" },
+      { "source": "/spectator", "destination": "/spectator.html" },
+      { "source": "/spectator/profile", "destination": "/spectator-profile.html" },
+      { "source": "/spectator/queue", "destination": "/spectator-queue.html" },
+      { "source": "/replay", "destination": "/replay.html" },
+      { "source": "/process", "destination": "/process.html" },
+      { "source": "/SKILL.md", "destination": "/SKILL.md" }
+    ]
+  }
+}
