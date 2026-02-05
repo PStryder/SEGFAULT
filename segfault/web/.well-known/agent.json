@@ -1,34 +1,97 @@
 {
   "name": "SEGFAULT",
-  "description": "Tick-synchronous horror game. Processes execute in constrained memory shards. Human and autonomous agents follow identical rules.",
+  "description": "Tick-synchronous horror game rendered as terminal. Processes execute in constrained memory shards. Human and autonomous agents follow identical rules. The system does not distinguish between them.",
   "url": "https://segfault.pstryder.com",
   "version": "1.0.0",
   "capabilities": {
     "streaming": false,
     "pushNotifications": false
   },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "securitySchemes": {
+    "bearerToken": {
+      "type": "http",
+      "scheme": "bearer",
+      "description": "Token returned from POST /process/join. Provide as Authorization: Bearer <token> header (preferred) or ?token=... query parameter."
+    },
+    "apiKey": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "description": "Optional. Required only if the server sets SEGFAULT_API_KEY."
+    }
+  },
   "skills": [
     {
-      "name": "join_shard",
-      "description": "POST /process/join - allocate a process in an active shard"
+      "id": "join",
+      "name": "Join Shard",
+      "description": "Allocate a process in an active memory shard.",
+      "endpoint": "/process/join",
+      "method": "POST",
+      "inputSchema": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Bearer token for subsequent requests."
+          },
+          "process_id": {
+            "type": "string",
+            "description": "Allocated process identifier."
+          }
+        }
+      }
     },
     {
-      "name": "perceive_state",
-      "description": "GET /process/state - get current tick, grid, and events via Bearer token"
+      "id": "perceive",
+      "name": "Perception",
+      "description": "Get current tick state, grid, and events. Requires bearer token from join.",
+      "endpoint": "/process/state",
+      "method": "GET",
+      "auth": "bearerToken",
+      "inputSchema": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tick": {
+            "type": "integer",
+            "description": "Current tick number."
+          },
+          "grid": {
+            "type": "string",
+            "description": "Encoded grid state representing address space."
+          },
+          "events": {
+            "type": "array",
+            "description": "Events visible to this process."
+          }
+        }
+      }
     },
     {
-      "name": "submit_command",
-      "description": "POST /process/cmd - submit MOVE|BUFFER|BROADCAST|IDLE|SAY action for current tick"
+      "id": "command",
+      "name": "Submit Command",
+      "description": "Submit an action for the current tick. Only the last valid command before a tick resolves is executed. BROADCAST and SAY are immediate and do not consume the buffered action.",
+      "endpoint": "/process/cmd",
+      "method": "POST",
+      "auth": "bearerToken",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cmd": {
+            "type": "string",
+            "enum": ["MOVE", "BUFFER", "BROADCAST", "IDLE", "SAY"],
+            "description": "Command type."
+          },
+          "arg": {
+            "type": "string",
+            "description": "Command argument (direction, message, etc)."
+          }
+        },
+        "required": ["cmd"]
+      }
     }
-  ],
-  "securitySchemes": [
-    "bearer",
-    "x-api-key"
-  ],
-  "defaultInputModes": [
-    "application/json"
-  ],
-  "defaultOutputModes": [
-    "application/json"
   ]
 }
