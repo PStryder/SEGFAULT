@@ -57,6 +57,20 @@
     #grid-fallback {
       display: none;
     }
+    #events {
+      max-height: 180px;
+      min-height: 80px;
+    }
+    /* Gentler tick indicator - subtle border pulse instead of screen flash */
+    body.process.tick-flash::after {
+      display: none !important;
+    }
+    body.process .tick-indicator {
+      transition: border-color 0.3s ease-out;
+    }
+    body.process.tick-flash .tick-indicator {
+      border-color: var(--accent);
+    }
   </style>
 </head>
 <body class="process">
@@ -80,7 +94,7 @@
       </div>
     </div>
     <div class="column">
-      <div class="panel">
+      <div class="panel tick-indicator">
         <div class="label">Shard View</div>
         <div class="direction-wrapper">
           <button class="dir-btn" data-dir="1">↖</button>
@@ -97,7 +111,7 @@
       </div>
       <div class="panel">
         <div class="label">Local Log</div>
-        <pre id="events"></pre>
+        <div id="events" class="trace-log"></div>
       </div>
     </div>
   </section>
@@ -146,6 +160,8 @@
     let pollHandle = null;
     let lastTick = null;
     let flashHandle = null;
+    let seenEventKeys = new Set();
+    const MAX_LOG_LINES = 200;
 
     function saveToken(t) {
       token = t;
@@ -348,23 +364,43 @@
       tickEl.textContent = data.tick || 0;
 
       if (data.center && data.visible) {
+        document.querySelector('.direction-wrapper').style.display = '';
+        gridFallback.style.display = 'none';
         renderProcessGrid(data);
       } else {
-        gridEl.style.display = 'none';
+        document.querySelector('.direction-wrapper').style.display = 'none';
         gridFallback.style.display = '';
         gridFallback.textContent = data.grid || '';
       }
 
-      eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
-      if (tickChanged) requestAnimationFrame(() => flashTick());
+      appendEvents(data.events || [], data.tick);
+      if (tickChanged) flashTick();
+    }
+
+    function appendEvents(events, tick) {
+      if (!events.length) return;
+      const shouldScroll = eventsEl.scrollHeight - eventsEl.scrollTop - eventsEl.clientHeight < 30;
+      events.forEach(e => {
+        const key = `${tick}|${e.message}`;
+        if (seenEventKeys.has(key)) return;
+        seenEventKeys.add(key);
+        const line = document.createElement('div');
+        line.textContent = `[T${tick}] ${e.message}`;
+        eventsEl.appendChild(line);
+      });
+      // Trim old entries
+      while (eventsEl.children.length > MAX_LOG_LINES) {
+        eventsEl.removeChild(eventsEl.firstChild);
+      }
+      if (shouldScroll) {
+        eventsEl.scrollTop = eventsEl.scrollHeight;
+      }
     }
 
     function flashTick() {
       if (flashHandle) clearTimeout(flashHandle);
-      document.body.classList.remove('tick-flash');
-      void document.body.offsetWidth;
       document.body.classList.add('tick-flash');
-      flashHandle = setTimeout(() => document.body.classList.remove('tick-flash'), 650);
+      flashHandle = setTimeout(() => document.body.classList.remove('tick-flash'), 400);
     }
 
     function showDeath(message) {
