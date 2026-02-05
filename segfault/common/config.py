@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 def _env_bool(value: str, default: bool = True) -> bool:
@@ -34,7 +34,9 @@ class Settings:
     empty_shard_ticks: int = int(os.getenv("SEGFAULT_EMPTY_SHARD_TICKS", "12"))
     random_seed: int = int(os.getenv("SEGFAULT_RANDOM_SEED", "42"))
     enable_tick_loop: bool = _env_bool(os.getenv("SEGFAULT_ENABLE_TICK_LOOP", "1"))
-    cors_origins: list[str] = _parse_origins(os.getenv("SEGFAULT_CORS_ORIGINS"))
+    cors_origins: list[str] = field(
+        default_factory=lambda: _parse_origins(os.getenv("SEGFAULT_CORS_ORIGINS"))
+    )
     cmd_rate_limit: int = int(os.getenv("SEGFAULT_CMD_RATE_LIMIT", "20"))
     cmd_rate_window_seconds: float = float(os.getenv("SEGFAULT_CMD_RATE_WINDOW", "1.0"))
     join_rate_limit: int = int(os.getenv("SEGFAULT_JOIN_RATE_LIMIT", "10"))
