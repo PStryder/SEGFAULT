@@ -546,13 +546,8 @@ async def chat_ws(ws: WebSocket, key: str | None = None) -> None:
             chat_clients.discard(ws)
 
 
-# Static web UI
+# Static web UI (process-only on the API host)
 app.mount("/static", StaticFiles(directory="segfault/web/static"), name="static")
-
-
-@app.get("/")
-def home() -> FileResponse:
-    return FileResponse("segfault/web/index.html")
 
 
 @app.get("/process")
@@ -560,41 +555,6 @@ def process_ui() -> FileResponse:
     return FileResponse("segfault/web/process.html")
 
 
-@app.get("/spectate")
-def spectator_ui() -> FileResponse:
-    return FileResponse("segfault/web/spectator.html")
-
-
-@app.get("/spectator")
-def spectator_ui_alias() -> FileResponse:
-    return FileResponse("segfault/web/spectator.html")
-
-
-@app.get("/spectator/profile")
-def spectator_profile_ui() -> FileResponse:
-    return FileResponse("segfault/web/spectator-profile.html")
-
-
-@app.get("/spectator/queue")
-def spectator_queue_ui() -> FileResponse:
-    return FileResponse("segfault/web/spectator-queue.html")
-
-
-@app.get("/replay")
-def replay_ui() -> FileResponse:
-    return FileResponse("segfault/web/replay.html")
-
-
-@app.get("/donate")
-def donate_placeholder() -> FileResponse:
-    return FileResponse("segfault/web/donate.html")
-
-
-@app.get("/adblock")
-def adblock_placeholder() -> FileResponse:
-    return FileResponse("segfault/web/adblock.html")
-
-
-@app.get("/SKILL.md")
-def skill_markdown() -> FileResponse:
-    return FileResponse("segfault/web/SKILL.md", media_type="text/markdown")
+@app.get("/process.html")
+def process_ui_alias() -> FileResponse:
+    return FileResponse("segfault/web/process.html")
