@@ -158,7 +158,14 @@ def on_segment(a: Point, b: Point, c: Point) -> bool:
 
 
 def diagonal_legal(a: Tile, b: Tile, walls: set[WallEdge]) -> bool:
-    """Diagonal move/LOS is legal if center-to-center segment does not intersect a wall edge."""
+    """Diagonal move/LOS is legal if corner-cutting is blocked and no wall edge is crossed."""
+    dx = b[0] - a[0]
+    dy = b[1] - a[1]
+    if abs(dx) != 1 or abs(dy) != 1:
+        return False
+    # Prevent diagonal peeking through blocked orthogonal edges.
+    if wall_blocks(a, (a[0] + dx, a[1]), walls) or wall_blocks(a, (a[0], a[1] + dy), walls):
+        return False
     seg = (tile_center(a), tile_center(b))
     for wall in walls:
         if segment_intersection_blocks(seg, wall.segment()):
@@ -186,13 +193,23 @@ def adjacent_tiles(tile: Tile, walls: set[WallEdge]) -> list[Tile]:
 def los_clear(a: Tile, b: Tile, walls: set[WallEdge]) -> bool:
     dx = b[0] - a[0]
     dy = b[1] - a[1]
-    if dx == 0 or dy == 0 or abs(dx) == abs(dy):
-        seg = (tile_center(a), tile_center(b))
-        for wall in walls:
-            if segment_intersection_blocks(seg, wall.segment()):
-                return False
+    if dx == 0 and dy == 0:
         return True
-    return False
+    if not (dx == 0 or dy == 0 or abs(dx) == abs(dy)):
+        return False
+    sx = 0 if dx == 0 else (1 if dx > 0 else -1)
+    sy = 0 if dy == 0 else (1 if dy > 0 else -1)
+    cur = a
+    while cur != b:
+        nxt = (cur[0] + sx, cur[1] + sy)
+        if sx == 0 or sy == 0:
+            if wall_blocks(cur, nxt, walls):
+                return False
+        else:
+            if not diagonal_legal(cur, nxt, walls):
+                return False
+        cur = nxt
+    return True
 
 
 def all_tiles() -> list[Tile]:
