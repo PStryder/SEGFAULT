@@ -5,8 +5,34 @@
   <title>SEGFAULT - Replay</title>
   <link rel="stylesheet" href="/static/style.css" />
   <style>
+    body.replay {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.replay .spectator-shell {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    body.replay .spectator-main {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    body.replay .spectator-row {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    body.replay .spectator-row .panel {
+      overflow-y: auto;
+    }
     .replay-footer {
-      margin-top: 16px;
+      flex-shrink: 0;
+      margin-top: 12px;
       padding: 12px;
       border: 1px solid var(--border);
       background: var(--panel);
@@ -16,7 +42,7 @@
     }
   </style>
 </head>
-<body class="spectator">
+<body class="spectator replay">
   <header class="site-header">
     <h1>REPLAY ARCHIVE</h1>
     <nav class="nav">
@@ -66,12 +92,11 @@
           <div id="event-log" class="trace-log" style="flex: 1; min-height: 80px;"></div>
         </div>
       </div>
+      <footer class="replay-footer">
+        <div id="ad-slot" class="ad-slot">Ad slot (replay)</div>
+      </footer>
     </div>
   </section>
-
-  <footer class="replay-footer">
-    <div id="ad-slot" class="ad-slot">Ad slot (replay)</div>
-  </footer>
 
   <div id="inspect-tooltip" class="inspect-tooltip" role="status" aria-live="polite"></div>
 
