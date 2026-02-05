@@ -49,7 +49,8 @@ class EchoTile:
 class DefragmenterState:
     pos: Tile
     target_id: str | None = None
-    target_reason: str | None = None  # broadcast | los | patrol
+    target_reason: str | None = None  # broadcast | los | watchdog | patrol
+    last_los_target_id: str | None = None
 
 
 @dataclass

@@ -103,8 +103,8 @@ These choices are consistent with `SEGFAULT.md` but weren't fully specified:
 - **Gate drift** moves to **orthogonal** adjacent tiles (not diagonal).
 - **Expanded visibility** renders tiles outside the local 3x3 with a blank digit (informational only). Movement still targets digits 1-9.
 - **BUFFER movement** is resolved as a single tick with a randomized path; collisions are enforced on the final destination.
-- **Spectator wall rendering** is a coarse marker in the 20x20 grid; edge-accurate rendering is a UI enhancement for later.
-- **Spectator inspection UI** (click-to-inspect) is not yet implemented in the minimal web UI.
+- **Spectator wall rendering** uses edge markers between tiles (CSS borders).
+- **Spectator inspection UI** is implemented in a basic click-to-inspect form.
 - **Local chat** is supported via a `SAY <message>` command and is delivered only to adjacent processes at send time.
 
 If any assumption should change, update `SEGFAULT.md` and the engine implementation.

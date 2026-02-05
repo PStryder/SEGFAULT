@@ -241,7 +241,7 @@ class TickEngine:
         preview: list[Tile] = []
         if target_pos:
             path = self._bfs_path(shard, shard.defragger.pos, target_pos)
-            preview = path[1:4]
+            preview = path[1:]
         return {
             "tick": shard.tick,
             "grid": render_spectator_grid(shard),
@@ -528,7 +528,21 @@ class TickEngine:
         # LOS targeting (lock persists until sprint)
         locked_targets = [p for p in shard.processes.values() if p.los_lock]
         if locked_targets:
-            target = sorted(locked_targets, key=lambda p: p.process_id)[0]
+            last_id = shard.defragger.last_los_target_id
+            last_proc = (
+                next((p for p in locked_targets if p.process_id == last_id), None)
+                if last_id
+                else None
+            )
+            if (
+                last_proc
+                and len(locked_targets) > 1
+                and _is_adjacent(shard.defragger.pos, last_proc.pos, shard)
+            ):
+                target = last_proc
+            else:
+                target = self._round_robin_target(locked_targets, last_id)
+            shard.defragger.last_los_target_id = target.process_id
             shard.defragger.target_reason = "los"
             return target.process_id, 0
         los_targets = [
@@ -537,9 +551,10 @@ class TickEngine:
             if los_clear(shard.defragger.pos, p.pos, shard.walls_set)
         ]
         if los_targets:
-            target = sorted(los_targets, key=lambda p: p.process_id)[0]
+            target = self._round_robin_target(los_targets, shard.defragger.last_los_target_id)
             target.los_lock = True
             self._reset_watchdog_on_liveness(shard, reason="los")
+            shard.defragger.last_los_target_id = target.process_id
             shard.defragger.target_reason = "los"
             return target.process_id, 0
         # Watchdog bonus
@@ -551,6 +566,18 @@ class TickEngine:
             return None, bonus
         shard.defragger.target_reason = "patrol"
         return None, bonus
+
+    def _round_robin_target(
+        self, candidates: list[ProcessState], last_id: str | None
+    ) -> ProcessState:
+        ordered = sorted(candidates, key=lambda p: p.process_id)
+        if not last_id or len(ordered) == 1:
+            return ordered[0]
+        ids = [p.process_id for p in ordered]
+        if last_id not in ids:
+            return ordered[0]
+        idx = ids.index(last_id)
+        return ordered[(idx + 1) % len(ordered)]
 
     def _broadcast_bonus(self, shard: ShardState, target_id: str) -> int:
         count = len([b for b in shard.broadcasts if b.process_id == target_id])
@@ -691,6 +718,7 @@ class TickEngine:
         self.persistence.record_death(proc.call_sign)
         shard.tick_events.kills.append(proc.process_id)
         shard.total_kills += 1
+        self._record_echo(shard, proc.pos)
         ts = int(time.time() * 1000)
         event = Event(
             kind="static_burst",
@@ -713,7 +741,6 @@ class TickEngine:
             for token, pid in list(self.session_tokens.items()):
                 if pid[0] == proc.process_id:
                     self.session_tokens.pop(token, None)
-        self._record_echo(shard, proc.pos)
 
     def _transfer_process(self, shard: ShardState, proc: ProcessState) -> None:
         # Create new process in a new shard

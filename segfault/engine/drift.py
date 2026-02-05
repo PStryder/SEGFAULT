@@ -46,15 +46,11 @@ def drift_gates(shard: ShardState, rng: random.Random) -> None:
         occupied_with_gates = occupied | {g.pos for g in shard.gates if g is not gate}
         candidates = [t for t in orthogonal_neighbors(gate.pos) if in_bounds(t)]
         rng.shuffle(candidates)
-        moved = False
         for tile in candidates:
             if tile in occupied_with_gates:
                 continue
             gate.pos = tile
-            moved = True
             break
-        if not moved:
-            gate.pos = gate.pos
 
 
 def _drift_constraints_ok(shard: ShardState) -> bool:

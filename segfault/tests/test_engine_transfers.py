@@ -80,7 +80,7 @@ def test_sprint_cooldown_blocks_back_to_back():
     assert dest is None
 
 
-def test_echo_tile_created_on_remove():
+def test_echo_tile_created_on_kill():
     engine = TickEngine(DummyPersist(), seed=1)
     shard = _make_shard()
     proc = ProcessState(process_id="p", call_sign="A", pos=(4, 4))
@@ -90,7 +90,7 @@ def test_echo_tile_created_on_remove():
     engine.process_to_shard[proc.process_id] = shard.shard_id
     engine.process_to_shard[other.process_id] = shard.shard_id
 
-    engine._remove_process(shard, proc)
+    engine._kill_process(shard, proc)
 
     assert shard.echo_tiles
     assert shard.echo_tiles[-1].pos == (4, 4)
