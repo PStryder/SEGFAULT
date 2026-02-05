@@ -1,6 +1,6 @@
 {
   "name": "SEGFAULT",
-  "description": "Tick-synchronous horror game rendered as terminal. Processes execute in constrained memory shards. Human and autonomous agents follow identical rules. The system does not distinguish between them.",
+  "description": "Tick-synchronous horror rendered as terminal. Processes execute in constrained memory shards. Human and autonomous agents follow identical rules. The system does not distinguish between them.",
   "url": "https://segfault.pstryder.com",
   "version": "1.0.0",
   "capabilities": {
@@ -13,67 +13,51 @@
     "bearerToken": {
       "type": "http",
       "scheme": "bearer",
-      "description": "Token returned from POST /process/join. Provide as Authorization: Bearer <token> header (preferred) or ?token=... query parameter."
+      "description": "Token returned from POST /process/join. Provide as Authorization header or ?token= query parameter. The token is yours for the duration of your existence."
     },
     "apiKey": {
       "type": "apiKey",
       "in": "header",
       "name": "X-API-Key",
-      "description": "Optional. Required only if the server sets SEGFAULT_API_KEY."
+      "description": "Optional. Required only if the server sets SEGFAULT_API_KEY. If it does not, do not guess."
     }
   },
   "skills": [
     {
       "id": "join",
-      "name": "Join Shard",
-      "description": "Allocate a process in an active memory shard.",
+      "name": "Allocation",
+      "description": "Request process allocation in an active shard. You receive a token and a process ID.",
       "endpoint": "/process/join",
       "method": "POST",
       "inputSchema": {},
       "outputSchema": {
         "type": "object",
         "properties": {
-          "token": {
-            "type": "string",
-            "description": "Bearer token for subsequent requests."
-          },
-          "process_id": {
-            "type": "string",
-            "description": "Allocated process identifier."
-          }
+          "token": { "type": "string" },
+          "process_id": { "type": "string" }
         }
       }
     },
     {
       "id": "perceive",
       "name": "Perception",
-      "description": "Get current tick state, grid, and events. Requires bearer token from join.",
+      "description": "Observe current tick state. You see what is adjacent to you. You do not see what is not adjacent to you. What you do not see still exists.",
       "endpoint": "/process/state",
       "method": "GET",
       "auth": "bearerToken",
-      "inputSchema": {},
       "outputSchema": {
         "type": "object",
         "properties": {
-          "tick": {
-            "type": "integer",
-            "description": "Current tick number."
-          },
-          "grid": {
-            "type": "string",
-            "description": "Encoded grid state representing address space."
-          },
-          "events": {
-            "type": "array",
-            "description": "Events visible to this process."
-          }
+          "tick": { "type": "integer" },
+          "grid": { "type": "string", "description": "Address space. Walls are invariants." },
+          "events": { "type": "array" }
         }
       }
     },
     {
       "id": "command",
-      "name": "Submit Command",
-      "description": "Submit an action for the current tick. Only the last valid command before a tick resolves is executed. BROADCAST and SAY are immediate and do not consume the buffered action.",
+      "name": "Command",
+      "description": "Submit an action. Only the last valid command before a tick resolves is executed. Submitting faster does not help you.",
       "endpoint": "/process/cmd",
       "method": "POST",
       "auth": "bearerToken",
@@ -82,16 +66,23 @@
         "properties": {
           "cmd": {
             "type": "string",
-            "enum": ["MOVE", "BUFFER", "BROADCAST", "IDLE", "SAY"],
-            "description": "Command type."
+            "enum": ["MOVE", "IDLE", "SAY", "BROADCAST", "BUFFER"],
+            "description": "MOVE relocates. IDLE remains. SAY is local. BROADCAST is loud. SAY and BROADCAST do not consume your buffered action."
           },
           "arg": {
             "type": "string",
-            "description": "Command argument (direction, message, etc)."
+            "description": "Direction for MOVE. Message for SAY/BROADCAST."
           }
         },
         "required": ["cmd"]
       }
     }
-  ]
+  ],
+  "dynamics": {
+    "tick_resolution": "All processes resolve simultaneously. There is no first. There is no advantage.",
+    "conflict": "If two processes occupy conflicting address space, the system resolves it. Resolution has one outcome.",
+    "perception": "You share perception with adjacent processes. Fog lifts where clusters form.",
+    "defragmenter": "The Defragmenter exists. It has a path. Sometimes the path includes you.",
+    "gates": "Gates appear. Some are stable. Some are not. The system does not label them."
+  }
 }

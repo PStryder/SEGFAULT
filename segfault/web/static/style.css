@@ -134,6 +134,7 @@ body.tick-flash::after {
   gap: 12px;
   align-items: stretch;
   flex: 1;
+  min-height: 0;
 }
 
 .spectator-bottom {
@@ -147,7 +148,9 @@ body.tick-flash::after {
 
 .spectator-row .panel {
   margin-bottom: 0;
-  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .shard-index {
@@ -157,7 +160,9 @@ body.tick-flash::after {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .column {
@@ -297,8 +302,7 @@ button.active {
 
 #chatlog {
   flex: 1;
-  min-height: 240px;
-  max-height: none;
+  min-height: 0;
   overflow-y: auto;
   background: #000;
   padding: 8px;
