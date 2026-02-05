@@ -238,7 +238,7 @@
       const otherProcs = new Set((data.other_processes || []).map(p => p.join(',')));
       const gateSet = new Set((data.gates || []).map(g => g.join(',')));
       const echoSet = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
-      const defraggerKey = defraggerRevealed && data.defragger ? data.defragger.join(',') : null;
+      const defraggerKey = data.defragger ? data.defragger.join(',') : null;
       const wallSet = new Set((data.walls || []).map(w => wallKey(w.a, w.b)));
 
       const minX = cx - FOV_RADIUS;
@@ -266,7 +266,7 @@
             cell.classList.add('self');
             cell.textContent = '@';
           } else if (key === defraggerKey) {
-            cell.classList.add('defragger');
+            if (defraggerRevealed) cell.classList.add('defragger');
             cell.textContent = 'D';
           } else if (otherProcs.has(key)) {
             cell.classList.add('process');
