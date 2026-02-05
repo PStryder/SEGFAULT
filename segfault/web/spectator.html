@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   <title>SEGFAULT - Spectator</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
@@ -70,6 +71,11 @@
     const sayLogEl = document.getElementById('saylog');
     let lastTick = null;
     let lastWatchdogTick = null;
+    const TICK_MS = 10000;
+    const DEFRAGGER_REVEAL_MS = TICK_MS / 2;
+    let defraggerRevealed = true; // true on first load (no delay)
+    let defraggerRevealTimer = null;
+    let currentFullData = null;
     const seenSayEvents = new Set();
     const seenSayOrder = [];
     const seenBroadcasts = new Set();
@@ -159,14 +165,19 @@
     }
 
     function handleSpectatorData(data) {
-      renderGrid(data);
+      currentFullData = data;
       if (data && typeof data.tick === 'number') {
         if (lastTick !== null && data.tick !== lastTick) {
+          // New tick: hide defragger, schedule reveal
+          defraggerRevealed = false;
+          if (defraggerRevealTimer) clearTimeout(defraggerRevealTimer);
+          defraggerRevealTimer = setTimeout(revealDefragger, DEFRAGGER_REVEAL_MS);
           refreshFlavor();
           loadShards();
         }
         lastTick = data.tick;
       }
+      renderGrid(data);
       if (data.watchdog && typeof data.tick === 'number' && data.tick !== lastWatchdogTick) {
         appendSayTrace(
           `[SYSTEM] Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`
@@ -246,6 +257,11 @@
       reconnectDelay = Math.min(reconnectDelay * 2, 15000);
     }
 
+    function revealDefragger() {
+      defraggerRevealed = true;
+      if (currentFullData) renderGrid(currentFullData);
+    }
+
     function renderGrid(data) {
       const grid = data.grid || [];
       const height = grid.length;
@@ -258,13 +274,13 @@
       gridEl.innerHTML = '';
       hideTooltip();
 
-      const previewList = data.defragger_preview || [];
+      const previewList = defraggerRevealed ? (data.defragger_preview || []) : [];
       const preview = new Set(previewList.map(pos => pos.join(',')));
       const previewNext = previewList.length ? previewList[0].join(',') : null;
       const processes = new Map((data.processes || []).map(p => [p.pos.join(','), p.id]));
       const gates = new Map((data.gates || []).map(g => [g.pos.join(','), g.type]));
       const echoes = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
-      const defraggerPos = data.defragger ? data.defragger.join(',') : null;
+      const defraggerPos = defraggerRevealed && data.defragger ? data.defragger.join(',') : null;
       const wallSet = new Set((data.walls || []).map(w => wallKey(w.a, w.b)));
 
       for (let y = 0; y < height; y++) {
@@ -312,7 +328,7 @@
     function showTooltipForTile(x, y, data, anchorEl) {
       const key = `${x},${y}`;
       const lines = [`Tile (${x}, ${y})`];
-      if (data.defragger && data.defragger.join(',') === key) {
+      if (defraggerRevealed && data.defragger && data.defragger.join(',') === key) {
         lines.push('Defragmenter');
         if (typeof data.total_kills === 'number') {
           lines.push(`PIDs TERM: ${data.total_kills}`);
