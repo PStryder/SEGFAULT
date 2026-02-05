@@ -18,7 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 class SqlitePersistence(Persistence):
-    def __init__(self, db_path: str, replay_compress: bool = False) -> None:
+    def __init__(
+        self,
+        db_path: str,
+        replay_compress: bool = False,
+        replay_max_ticks: int = 0,
+        replay_max_shards: int = 0,
+    ) -> None:
         self.db_path = db_path
         self._pragmas = (
             "PRAGMA journal_mode=WAL",
@@ -27,6 +33,8 @@ class SqlitePersistence(Persistence):
         )
         self._local = threading.local()
         self._replay_compress = replay_compress
+        self._replay_max_ticks = replay_max_ticks
+        self._replay_max_shards = replay_max_shards
         self._init_db()
         self._write_queue: queue.Queue[
             tuple[Callable[[sqlite3.Connection], object], threading.Event, dict[str, object]] | None
@@ -298,6 +306,13 @@ class SqlitePersistence(Persistence):
                 "VALUES (?, ?, ?, ?)",
                 (shard_id, tick, payload, created_at),
             )
+            if self._replay_max_ticks > 0:
+                cutoff = tick - self._replay_max_ticks
+                if cutoff >= 0:
+                    conn.execute(
+                        "DELETE FROM replay_ticks WHERE shard_id = ? AND tick <= ?",
+                        (shard_id, cutoff),
+                    )
 
         self._run_write(_task, wait=False)
 
@@ -309,6 +324,7 @@ class SqlitePersistence(Persistence):
                 "INSERT OR IGNORE INTO replay_shards(shard_id, started_at) VALUES (?, ?)",
                 (shard_id, started_at),
             )
+            self._enforce_replay_shard_limit(conn)
 
         self._run_write(_task, wait=False)
 
@@ -333,6 +349,7 @@ class SqlitePersistence(Persistence):
                     shard_id,
                 ),
             )
+            self._enforce_replay_shard_limit(conn)
 
         self._run_write(_task, wait=False)
 
@@ -384,3 +401,31 @@ class SqlitePersistence(Persistence):
             raw = zlib.decompress(base64.b64decode(encoded)).decode("utf-8")
             return json.loads(raw)
         return json.loads(payload)
+
+    def _enforce_replay_shard_limit(self, conn: sqlite3.Connection) -> None:
+        if self._replay_max_shards <= 0:
+            return
+        active_rows = conn.execute(
+            "SELECT shard_id FROM replay_shards WHERE ended_at IS NULL"
+        ).fetchall()
+        active_ids = [row[0] for row in active_rows]
+        remaining = max(0, self._replay_max_shards - len(active_ids))
+        keep_ids = list(active_ids)
+        if remaining > 0:
+            rows = conn.execute(
+                "SELECT shard_id FROM replay_shards WHERE ended_at IS NOT NULL "
+                "ORDER BY started_at DESC LIMIT ?",
+                (remaining,),
+            ).fetchall()
+            keep_ids.extend(row[0] for row in rows)
+        if not keep_ids:
+            return
+        placeholders = ",".join("?" for _ in keep_ids)
+        conn.execute(
+            f"DELETE FROM replay_ticks WHERE shard_id NOT IN ({placeholders})",
+            keep_ids,
+        )
+        conn.execute(
+            f"DELETE FROM replay_shards WHERE shard_id NOT IN ({placeholders})",
+            keep_ids,
+        )

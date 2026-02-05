@@ -44,6 +44,9 @@ class Settings:
     leaderboard_cache_seconds: int = int(os.getenv("SEGFAULT_LEADERBOARD_CACHE_SECONDS", "300"))
     enable_replay_logging: bool = _env_bool(os.getenv("SEGFAULT_REPLAY_LOGGING", "1"))
     replay_compress: bool = _env_bool(os.getenv("SEGFAULT_REPLAY_COMPRESS", "0"))
+    replay_max_ticks: int = int(os.getenv("SEGFAULT_REPLAY_MAX_TICKS", "0"))
+    replay_max_shards: int = int(os.getenv("SEGFAULT_REPLAY_MAX_SHARDS", "0"))
+    ws_allow_any_origin: bool = _env_bool(os.getenv("SEGFAULT_WS_ALLOW_ANY_ORIGIN", "0"))
     api_key: str | None = os.getenv("SEGFAULT_API_KEY")
 
 

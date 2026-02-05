@@ -94,6 +94,8 @@ def _check_api_key(provided: str | None) -> None:
 
 
 def _is_allowed_origin(origin: str | None) -> bool:
+    if settings.ws_allow_any_origin:
+        return True
     if not origin:
         return True
     allowed = [o.rstrip("/") for o in settings.cors_origins]
@@ -111,48 +113,72 @@ def _prune_rate_limit(
             store.pop(key, None)
 
 
-async def _check_rate_limit(token: str) -> None:
-    limit = settings.cmd_rate_limit
-    if limit <= 0:
-        return
+async def _apply_rate_limit(
+    store: dict[str, tuple[int, float]],
+    lock: asyncio.Lock,
+    key: str | None,
+    limit: int,
+    window_seconds: float,
+    detail: str,
+) -> dict[str, str]:
+    if limit <= 0 or not key:
+        return {}
     now = time.monotonic()
-    async with rate_limit_lock:
-        count, start = cmd_rate.get(token, (0, now))
-        if now - start >= settings.cmd_rate_window_seconds:
+    async with lock:
+        count, start = store.get(key, (0, now))
+        if now - start >= window_seconds:
             count = 0
             start = now
         count += 1
-        cmd_rate[token] = (count, start)
-        _prune_rate_limit(cmd_rate, settings.cmd_rate_window_seconds, now)
+        store[key] = (count, start)
+        _prune_rate_limit(store, window_seconds, now)
+        remaining = max(0, limit - count)
+        reset = max(0, window_seconds - (now - start))
+        headers = {
+            "X-RateLimit-Limit": str(limit),
+            "X-RateLimit-Remaining": str(remaining),
+            "X-RateLimit-Reset": str(int(reset)),
+        }
         if count > limit:
             raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limit exceeded"
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=detail,
+                headers=headers,
             )
+        return headers
 
 
-async def _check_join_rate(ip: str | None) -> None:
-    limit = settings.join_rate_limit
-    if limit <= 0 or not ip:
-        return
-    now = time.monotonic()
-    async with join_rate_lock:
-        count, start = join_rate.get(ip, (0, now))
-        if now - start >= settings.join_rate_window_seconds:
-            count = 0
-            start = now
-        count += 1
-        join_rate[ip] = (count, start)
-        _prune_rate_limit(join_rate, settings.join_rate_window_seconds, now)
-        if count > limit:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Join rate limit exceeded"
-            )
+async def _check_rate_limit(token: str) -> dict[str, str]:
+    return await _apply_rate_limit(
+        cmd_rate,
+        rate_limit_lock,
+        token,
+        settings.cmd_rate_limit,
+        settings.cmd_rate_window_seconds,
+        "Rate limit exceeded",
+    )
+
+
+async def _check_join_rate(ip: str | None) -> dict[str, str]:
+    return await _apply_rate_limit(
+        join_rate,
+        join_rate_lock,
+        ip,
+        settings.join_rate_limit,
+        settings.join_rate_window_seconds,
+        "Join rate limit exceeded",
+    )
 
 
 @app.on_event("startup")
 async def _startup() -> None:
     global persistence, engine, tick_task
-    persistence = SqlitePersistence(settings.db_path, replay_compress=settings.replay_compress)
+    persistence = SqlitePersistence(
+        settings.db_path,
+        replay_compress=settings.replay_compress,
+        replay_max_ticks=settings.replay_max_ticks,
+        replay_max_shards=settings.replay_max_shards,
+    )
     if persistence.flavor_count() == 0:
         flavor_path = Path(__file__).resolve().parents[1] / "lore" / "flavor.md"
         inserted = persistence.seed_flavor_from_markdown(str(flavor_path))
@@ -274,11 +300,12 @@ async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[dict[str, object]
 
 @app.post("/process/join", response_model=JoinResponse)
 async def join_process(
-    request: Request, x_api_key: str | None = Header(default=None)
+    request: Request, response: Response, x_api_key: str | None = Header(default=None)
 ) -> JoinResponse:
     _check_api_key(x_api_key)
     ip = request.client.host if request.client else None
-    await _check_join_rate(ip)
+    headers = await _check_join_rate(ip)
+    response.headers.update(headers)
     game_engine = _get_engine()
     async with engine_lock:
         result = game_engine.join_process()
@@ -310,6 +337,7 @@ async def process_state(
 @app.post("/process/cmd")
 async def process_cmd(
     req: CommandRequest,
+    response: Response,
     token: str | None = None,
     authorization: str | None = Header(default=None),
     x_api_key: str | None = Header(default=None),
@@ -318,7 +346,8 @@ async def process_cmd(
     resolved = _extract_token(token, authorization)
     if not resolved:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    await _check_rate_limit(resolved)
+    headers = await _check_rate_limit(resolved)
+    response.headers.update(headers)
     game_engine = _get_engine()
     async with engine_lock:
         process_id = game_engine.resolve_token(resolved, settings.token_ttl_seconds)
