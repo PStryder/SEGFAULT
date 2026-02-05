@@ -63,6 +63,14 @@ class WatchdogState:
 
 
 @dataclass
+class TickEvents:
+    kills: List[str] = field(default_factory=list)
+    survivals: List[str] = field(default_factory=list)
+    ghosts: List[str] = field(default_factory=list)
+    spawns: List[str] = field(default_factory=list)
+
+
+@dataclass
 class ShardState:
     shard_id: str
     walls: Dict[int, WallEdge]
@@ -73,6 +81,12 @@ class ShardState:
     say_events: List[SayEvent] = field(default_factory=list)
     echo_tiles: List[EchoTile] = field(default_factory=list)
     noise_burst_remaining: int = 0
+    tick_events: TickEvents = field(default_factory=TickEvents)
+    pending_spawns: List[str] = field(default_factory=list)
+    total_processes: int = 0
+    total_kills: int = 0
+    total_survivals: int = 0
+    total_ghosts: int = 0
     tick: int = 0
     watchdog: WatchdogState = field(default_factory=WatchdogState)
     empty_ticks: int = 0

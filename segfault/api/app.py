@@ -16,6 +16,8 @@ from segfault.api.models import (
     CommandRequest,
     JoinResponse,
     ProcessStateResponse,
+    ReplayResponse,
+    ReplayShardSummary,
     SpectatorShardState,
 )
 from segfault.api.public_docs import PUBLIC_DOCS
@@ -140,6 +142,7 @@ async def _startup() -> None:
         min_active_processes=settings.min_active_processes,
         empty_shard_ticks=settings.empty_shard_ticks,
         max_total_processes=settings.max_total_processes,
+        enable_replay_logging=settings.enable_replay_logging,
     )
     engine.create_shard()
     if settings.enable_tick_loop:
@@ -371,6 +374,34 @@ async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response 
     return {"entries": entries}
 
 
+@app.get("/replays", response_model=Dict[str, List[ReplayShardSummary]])
+async def list_replays(
+    limit: int = 50, x_api_key: str | None = Header(default=None)
+) -> Dict[str, List[ReplayShardSummary]]:
+    _check_api_key(x_api_key)
+    store = _get_persistence()
+    capped = max(1, min(limit, 200))
+    shards = store.list_replay_shards(capped)
+    return {"shards": shards}
+
+
+@app.get("/replays/{shard_id}", response_model=ReplayResponse)
+async def replay_detail(
+    shard_id: str,
+    start_tick: int = 0,
+    limit: int = 100,
+    x_api_key: str | None = Header(default=None),
+) -> ReplayResponse:
+    _check_api_key(x_api_key)
+    store = _get_persistence()
+    capped = max(1, min(limit, 500))
+    ticks = store.get_replay_ticks(shard_id, start_tick=start_tick, limit=capped + 1)
+    has_more = len(ticks) > capped
+    if has_more:
+        ticks = ticks[:capped]
+    return ReplayResponse(shard_id=shard_id, ticks=ticks, has_more=has_more)
+
+
 @app.websocket("/spectate/ws/{shard_id}")
 async def spectate_ws(ws: WebSocket, shard_id: str, key: str | None = None) -> None:
     _check_api_key(key)
@@ -475,6 +506,11 @@ def spectator_profile_ui() -> FileResponse:
 @app.get("/spectator/queue")
 def spectator_queue_ui() -> FileResponse:
     return FileResponse("segfault/web/spectator-queue.html")
+
+
+@app.get("/replay")
+def replay_ui() -> FileResponse:
+    return FileResponse("segfault/web/replay.html")
 
 
 @app.get("/donate")

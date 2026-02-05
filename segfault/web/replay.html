@@ -1,0 +1,388 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SEGFAULT - Replay</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="spectator">
+  <header class="site-header">
+    <h1>REPLAY ARCHIVE</h1>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/spectator">Spectate</a>
+      <a href="/spectator/queue">Queue</a>
+      <a href="/donate">Donate</a>
+    </nav>
+  </header>
+
+  <section class="spectator-shell">
+    <div class="panel">
+      <div class="label">Replay Shards</div>
+      <div id="replay-list" class="shard-list"></div>
+    </div>
+
+    <div class="panel">
+      <div class="label">Playback</div>
+      <div class="controls">
+        <div class="chat-row">
+          <button id="play">Play</button>
+          <button id="pause">Pause</button>
+          <button id="step-back">Step -</button>
+          <button id="step-forward">Step +</button>
+        </div>
+        <div class="chat-row">
+          <span>Speed</span>
+          <button class="speed" data-speed="0.5">0.5x</button>
+          <button class="speed active" data-speed="1">1x</button>
+          <button class="speed" data-speed="2">2x</button>
+          <button class="speed" data-speed="4">4x</button>
+        </div>
+        <div class="chat-row">
+          <input id="scrubber" type="range" min="0" max="0" value="0" />
+          <span id="tick-display">Tick 0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="label">Replay Grid</div>
+      <div id="grid" class="grid"></div>
+      <div id="target-reason" class="status-line"></div>
+    </div>
+
+    <div class="panel">
+      <div class="label">Watchdog</div>
+      <pre id="watchdog"></pre>
+    </div>
+
+    <div class="panel">
+      <div class="label">Tick Events</div>
+      <pre id="tick-events"></pre>
+    </div>
+
+    <div class="panel">
+      <div class="label">Broadcasts</div>
+      <pre id="broadcasts"></pre>
+    </div>
+
+    <div class="panel">
+      <div class="label">Say Traces</div>
+      <pre id="saylog"></pre>
+    </div>
+
+    <div class="panel">
+      <div class="label">Process List</div>
+      <pre id="process-list"></pre>
+    </div>
+  </section>
+
+  <script>
+    const DEFAULT_API_BASE = 'https://segfault.pstryder.com';
+    const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
+    const API_KEY = window.API_KEY || '';
+    const TICK_SECONDS = 10;
+    const CHUNK_SIZE = 100;
+
+    const replayListEl = document.getElementById('replay-list');
+    const gridEl = document.getElementById('grid');
+    const tickDisplayEl = document.getElementById('tick-display');
+    const scrubberEl = document.getElementById('scrubber');
+    const watchdogEl = document.getElementById('watchdog');
+    const tickEventsEl = document.getElementById('tick-events');
+    const broadcastsEl = document.getElementById('broadcasts');
+    const saylogEl = document.getElementById('saylog');
+    const processListEl = document.getElementById('process-list');
+    const targetReasonEl = document.getElementById('target-reason');
+
+    let selectedShard = null;
+    let shardMeta = {};
+
+    class ReplayPlayer {
+      constructor() {
+        this.shardId = null;
+        this.tickMap = new Map();
+        this.loadedUntil = -1;
+        this.hasMore = true;
+        this.loading = false;
+        this.currentTick = 0;
+        this.totalTicks = 0;
+        this.playing = false;
+        this.speed = 1.0;
+        this.intervalId = null;
+      }
+
+      async loadShard(shardId, totalTicks) {
+        this.pause();
+        this.shardId = shardId;
+        this.tickMap.clear();
+        this.loadedUntil = -1;
+        this.hasMore = true;
+        this.loading = false;
+        this.currentTick = 0;
+        this.totalTicks = totalTicks || 0;
+        scrubberEl.max = this.totalTicks;
+        scrubberEl.value = 0;
+        await this.loadNextChunk();
+        await this.ensureTickLoaded(this.currentTick);
+        renderCurrent();
+      }
+
+      async loadNextChunk() {
+        if (!this.shardId || this.loading || !this.hasMore) return;
+        this.loading = true;
+        const startTick = this.loadedUntil + 1;
+        const url = `${API_BASE_URL}/replays/${this.shardId}?start_tick=${startTick}&limit=${CHUNK_SIZE}`;
+        const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
+        const res = await fetch(url, { headers });
+        if (!res.ok) {
+          this.loading = false;
+          return;
+        }
+        const data = await res.json();
+        (data.ticks || []).forEach(entry => {
+          this.tickMap.set(entry.tick, entry.snapshot);
+          this.loadedUntil = Math.max(this.loadedUntil, entry.tick);
+        });
+        this.hasMore = data.has_more;
+        this.loading = false;
+      }
+
+      async ensureTickLoaded(tick) {
+        while (tick > this.loadedUntil && this.hasMore) {
+          await this.loadNextChunk();
+        }
+      }
+
+      play() {
+        if (this.playing) return;
+        this.playing = true;
+        const interval = (TICK_SECONDS * 1000) / this.speed;
+        this.intervalId = setInterval(() => {
+          this.stepForward();
+        }, interval);
+      }
+
+      pause() {
+        this.playing = false;
+        if (this.intervalId) {
+          clearInterval(this.intervalId);
+          this.intervalId = null;
+        }
+      }
+
+      setSpeed(multiplier) {
+        this.speed = multiplier;
+        if (this.playing) {
+          this.pause();
+          this.play();
+        }
+      }
+
+      async stepForward() {
+        if (this.currentTick >= this.totalTicks) {
+          this.pause();
+          return;
+        }
+        this.currentTick += 1;
+        await this.ensureTickLoaded(this.currentTick);
+        renderCurrent();
+        if (this.hasMore && this.currentTick >= this.loadedUntil - Math.floor(CHUNK_SIZE * 0.2)) {
+          this.loadNextChunk();
+        }
+      }
+
+      async stepBackward() {
+        if (this.currentTick <= 0) return;
+        this.currentTick -= 1;
+        await this.ensureTickLoaded(this.currentTick);
+        renderCurrent();
+      }
+
+      async seekTo(tick) {
+        this.currentTick = Math.max(0, Math.min(tick, this.totalTicks));
+        await this.ensureTickLoaded(this.currentTick);
+        renderCurrent();
+      }
+
+      snapshot() {
+        return this.tickMap.get(this.currentTick) || null;
+      }
+    }
+
+    const player = new ReplayPlayer();
+
+    async function loadReplayList() {
+      const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
+      const res = await fetch(`${API_BASE_URL}/replays`, { headers });
+      if (!res.ok) return;
+      const data = await res.json();
+      const shards = data.shards || [];
+      replayListEl.innerHTML = '';
+      shards.forEach(shard => {
+        const btn = document.createElement('button');
+        const shortId = shard.shard_id.slice(0, 6);
+        const end = shard.ended_at ? new Date(shard.ended_at * 1000).toLocaleString() : 'LIVE';
+        btn.textContent = `Shard ${shortId} | ticks ${shard.total_ticks} | proc ${shard.total_processes} | end ${end}`;
+        btn.onclick = () => selectShard(shard);
+        replayListEl.appendChild(btn);
+      });
+      const params = new URLSearchParams(window.location.search);
+      const shardParam = params.get('shard');
+      if (shardParam) {
+        const match = shards.find(s => s.shard_id === shardParam);
+        if (match) {
+          selectShard(match, Number(params.get('tick') || 0));
+        }
+      }
+    }
+
+    async function selectShard(shard, startTick = 0) {
+      selectedShard = shard.shard_id;
+      shardMeta = shard;
+      await player.loadShard(shard.shard_id, shard.total_ticks || 0);
+      if (startTick > 0) {
+        await player.seekTo(startTick);
+      }
+      updateUrl();
+    }
+
+    function updateUrl() {
+      if (!selectedShard) return;
+      const params = new URLSearchParams();
+      params.set('shard', selectedShard);
+      params.set('tick', String(player.currentTick));
+      const next = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', next);
+    }
+
+    function renderCurrent() {
+      scrubberEl.value = player.currentTick;
+      tickDisplayEl.textContent = `Tick ${player.currentTick}`;
+      updateUrl();
+      const snapshot = player.snapshot();
+      if (!snapshot) {
+        gridEl.textContent = 'Loading...';
+        return;
+      }
+      renderGrid(snapshot);
+      renderPanels(snapshot);
+    }
+
+    function renderGrid(snapshot) {
+      const size = snapshot.grid_size || 20;
+      gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+      gridEl.innerHTML = '';
+
+      const wallSet = new Set((snapshot.walls || []).map(w => wallKey([w[0], w[1]], [w[2], w[3]])));
+      const processMap = new Map((snapshot.processes || []).map(p => [p.pos.join(','), p]));
+      const gateMap = new Map((snapshot.gates || []).map(g => [g.pos.join(','), g.type]));
+      const echoSet = new Set((snapshot.echo_tiles || []).map(e => e.pos.join(',')));
+      const defraggerPos = snapshot.defragger && snapshot.defragger.pos ? snapshot.defragger.pos.join(',') : null;
+      const targetId = snapshot.defragger && snapshot.defragger.target_id ? snapshot.defragger.target_id : null;
+      let targetPos = null;
+      if (targetId) {
+        const target = (snapshot.processes || []).find(p => p.id === targetId);
+        if (target) targetPos = target.pos.join(',');
+      }
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const key = `${x},${y}`;
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          if (key === defraggerPos) {
+            cell.classList.add('defragger');
+          } else if (processMap.has(key)) {
+            cell.classList.add('process');
+          } else if (gateMap.has(key)) {
+            cell.classList.add('gate');
+          } else if (echoSet.has(key)) {
+            cell.classList.add('echo');
+          }
+          if (targetPos && key === targetPos) {
+            cell.classList.add('target');
+          }
+          if (x + 1 < size && wallSet.has(wallKey([x, y], [x + 1, y]))) {
+            cell.classList.add('wall-e');
+          }
+          if (y + 1 < size && wallSet.has(wallKey([x, y], [x, y + 1]))) {
+            cell.classList.add('wall-s');
+          }
+          cell.textContent = '.';
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    function renderPanels(snapshot) {
+      const watchdog = snapshot.watchdog || {};
+      watchdogEl.textContent =
+        `Watchdog: quiet=${watchdog.quiet_ticks} countdown=${watchdog.countdown} active=${watchdog.active} bonus=${watchdog.bonus_step}`;
+
+      const events = snapshot.events || {};
+      tickEventsEl.textContent = [
+        `spawns: ${(events.spawns || []).join(' ') || '-'}`,
+        `kills: ${(events.kills || []).join(' ') || '-'}`,
+        `survivals: ${(events.survivals || []).join(' ') || '-'}`,
+        `ghosts: ${(events.ghosts || []).join(' ') || '-'}`,
+      ].join('\n');
+
+      const broadcasts = snapshot.broadcasts || [];
+      broadcastsEl.textContent = broadcasts.length
+        ? broadcasts.map(b => `[${b.process_id.slice(0, 6)}] ${b.message}`).join('\n')
+        : '';
+
+      const sayEvents = snapshot.say_events || [];
+      saylogEl.textContent = sayEvents.length
+        ? sayEvents.map(ev => {
+            const sender = ev.sender_pos ? `(${ev.sender_pos[0]},${ev.sender_pos[1]})` : '(?)';
+            const recipients = (ev.recipients || [])
+              .map(r => r.pos ? `(${r.pos[0]},${r.pos[1]})` : '(?)')
+              .join(' ');
+            const arrow = recipients ? `-> ${recipients}` : '-> (none)';
+            return `SAY ${sender} ${arrow}: ${ev.message}`;
+          }).join('\n')
+        : '';
+
+      const processes = snapshot.processes || [];
+      processListEl.textContent = processes.length
+        ? processes
+            .map(p => `${p.call_sign} ${p.id.slice(0, 6)} @ (${p.pos[0]},${p.pos[1]}) ${p.alive ? 'ALIVE' : 'DEAD'}`)
+            .join('\n')
+        : '';
+
+      const reason = snapshot.defragger ? snapshot.defragger.target_reason : null;
+      targetReasonEl.textContent = reason ? `Target reason: ${reason}` : '';
+    }
+
+    function wallKey(a, b) {
+      const ax = a[0];
+      const ay = a[1];
+      const bx = b[0];
+      const by = b[1];
+      if (ax < bx || (ax === bx && ay <= by)) {
+        return `${ax},${ay}|${bx},${by}`;
+      }
+      return `${bx},${by}|${ax},${ay}`;
+    }
+
+    document.getElementById('play').onclick = () => player.play();
+    document.getElementById('pause').onclick = () => player.pause();
+    document.getElementById('step-forward').onclick = () => player.stepForward();
+    document.getElementById('step-back').onclick = () => player.stepBackward();
+    scrubberEl.addEventListener('input', (e) => player.seekTo(Number(e.target.value)));
+    document.querySelectorAll('.speed').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.speed').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        player.setSpeed(Number(btn.dataset.speed));
+      });
+    });
+
+    loadReplayList();
+  </script>
+</body>
+</html>

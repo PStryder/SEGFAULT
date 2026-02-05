@@ -136,6 +136,11 @@ pre {
   border-color: #a33;
 }
 
+.grid-cell.target {
+  border-color: #ff5;
+  color: #ff5;
+}
+
 .grid-cell.wall-e {
   border-right: 2px solid #444;
 }
@@ -148,6 +153,16 @@ pre {
   font-size: 11px;
   color: #999;
   margin-bottom: 6px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controls input[type="range"] {
+  flex: 1;
 }
 
 button,

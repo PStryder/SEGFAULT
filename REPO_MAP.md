@@ -15,17 +15,26 @@ segfault/
     geometry.py      - Wall edges, adjacency, LOS, intersection tests
     state.py         - Core state dataclasses
   persist/
-    base.py          - Persistence interface
-    sqlite.py        - SQLite implementation
+    base.py          - Persistence interface (leaderboard, replay)
+    sqlite.py        - SQLite implementation + replay tables
   tests/
     test_geometry.py - Segment intersection/diagonal legality
     test_collision.py- Process collision rules
     test_drift.py    - Drift constraints (connectivity, wall count)
     test_broadcast.py- Broadcast targeting + escalation reset
+    test_say.py      - Local SAY mechanics + artifacts
+    test_flavor_seed.py - Flavor seed + random selection
+    test_engine_transfers.py - Ghost transfer + sprint cooldown + echoes
+    test_replay.py   - Replay logging + snapshot format
   web/
     index.html       - Home
     process.html     - Process UI
-    spectate.html    - Spectator UI
+    spectator.html   - Spectator UI
+    spectator-profile.html - Spectator profile placeholder
+    spectator-queue.html - Spectator queue placeholder
+    replay.html      - Replay viewer UI
+    SKILL.md         - Agent-facing join instructions
+    spectate.html    - Legacy spectator redirect
     donate.html      - Donation placeholder
     adblock.html     - Ad-blocker notice placeholder
     static/

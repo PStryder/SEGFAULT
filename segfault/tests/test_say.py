@@ -18,6 +18,21 @@ class DummyPersist(Persistence):
     def leaderboard(self):
         return []
 
+    def record_replay_tick(self, shard_id: str, tick: int, snapshot: dict) -> None:
+        pass
+
+    def register_replay_shard(self, shard_id: str) -> None:
+        pass
+
+    def finalize_replay_shard(self, shard_id: str, total_ticks: int, stats: dict) -> None:
+        pass
+
+    def list_replay_shards(self, limit: int = 50):
+        return []
+
+    def get_replay_ticks(self, shard_id: str, start_tick: int = 0, limit: int = 100):
+        return []
+
 
 def _make_shard() -> ShardState:
     return ShardState(

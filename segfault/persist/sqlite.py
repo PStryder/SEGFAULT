@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import queue
 import random
@@ -85,7 +86,32 @@ class SqlitePersistence(Persistence):
                     created_at INTEGER NOT NULL
                 )
                 """)
+        conn.execute("""
+                CREATE TABLE IF NOT EXISTS replay_ticks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    shard_id TEXT NOT NULL,
+                    tick INTEGER NOT NULL,
+                    snapshot TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    UNIQUE(shard_id, tick)
+                )
+                """)
+        conn.execute("""
+                CREATE TABLE IF NOT EXISTS replay_shards (
+                    shard_id TEXT PRIMARY KEY,
+                    started_at INTEGER NOT NULL,
+                    ended_at INTEGER,
+                    total_ticks INTEGER DEFAULT 0,
+                    total_processes INTEGER DEFAULT 0,
+                    total_kills INTEGER DEFAULT 0,
+                    total_survivals INTEGER DEFAULT 0,
+                    total_ghosts INTEGER DEFAULT 0
+                )
+                """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_flavor_channel_id ON flavor_text(channel, id)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_replay_shard_tick ON replay_ticks(shard_id, tick)"
+        )
         conn.commit()
 
     def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
@@ -254,3 +280,87 @@ class SqlitePersistence(Persistence):
                 continue
             lines.append((channel, line))
         return lines
+
+    def record_replay_tick(self, shard_id: str, tick: int, snapshot: dict) -> None:
+        payload = json.dumps(snapshot, separators=(",", ":"))
+        created_at = int(time.time())
+
+        def _task(conn: sqlite3.Connection) -> None:
+            conn.execute(
+                "INSERT OR IGNORE INTO replay_ticks(shard_id, tick, snapshot, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (shard_id, tick, payload, created_at),
+            )
+
+        self._run_write(_task, wait=False)
+
+    def register_replay_shard(self, shard_id: str) -> None:
+        started_at = int(time.time())
+
+        def _task(conn: sqlite3.Connection) -> None:
+            conn.execute(
+                "INSERT OR IGNORE INTO replay_shards(shard_id, started_at) VALUES (?, ?)",
+                (shard_id, started_at),
+            )
+
+        self._run_write(_task, wait=False)
+
+    def finalize_replay_shard(self, shard_id: str, total_ticks: int, stats: dict) -> None:
+        ended_at = int(time.time())
+        total_processes = int(stats.get("total_processes", 0))
+        total_kills = int(stats.get("total_kills", 0))
+        total_survivals = int(stats.get("total_survivals", 0))
+        total_ghosts = int(stats.get("total_ghosts", 0))
+
+        def _task(conn: sqlite3.Connection) -> None:
+            conn.execute(
+                "UPDATE replay_shards SET ended_at = ?, total_ticks = ?, total_processes = ?, "
+                "total_kills = ?, total_survivals = ?, total_ghosts = ? WHERE shard_id = ?",
+                (
+                    ended_at,
+                    total_ticks,
+                    total_processes,
+                    total_kills,
+                    total_survivals,
+                    total_ghosts,
+                    shard_id,
+                ),
+            )
+
+        self._run_write(_task, wait=False)
+
+    def list_replay_shards(self, limit: int = 50) -> List[Dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT shard_id, started_at, ended_at, total_ticks, total_processes, "
+            "total_kills, total_survivals, total_ghosts "
+            "FROM replay_shards ORDER BY started_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [
+            {
+                "shard_id": row[0],
+                "started_at": row[1],
+                "ended_at": row[2],
+                "total_ticks": row[3],
+                "total_processes": row[4],
+                "total_kills": row[5],
+                "total_survivals": row[6],
+                "total_ghosts": row[7],
+            }
+            for row in rows
+        ]
+
+    def get_replay_ticks(
+        self, shard_id: str, start_tick: int = 0, limit: int = 100
+    ) -> List[Dict]:
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT tick, snapshot FROM replay_ticks WHERE shard_id = ? AND tick >= ? "
+            "ORDER BY tick ASC LIMIT ?",
+            (shard_id, start_tick, limit),
+        ).fetchall()
+        result: List[Dict] = []
+        for tick, snapshot in rows:
+            result.append({"tick": tick, "snapshot": json.loads(snapshot)})
+        return result

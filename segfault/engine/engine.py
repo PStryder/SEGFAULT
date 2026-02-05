@@ -34,6 +34,7 @@ from segfault.engine.state import (
     SayEvent,
     SayRecipient,
     ShardState,
+    TickEvents,
     WatchdogState,
 )
 from segfault.persist.base import Persistence
@@ -76,12 +77,14 @@ class TickEngine:
         min_active_processes: int = 1,
         empty_shard_ticks: int = 12,
         max_total_processes: int | None = None,
+        enable_replay_logging: bool = True,
     ) -> None:
         self.persistence = persistence
         self.rng = random.Random(seed)
         self.min_active_processes = min_active_processes
         self.empty_shard_ticks = empty_shard_ticks
         self.max_total_processes = max_total_processes
+        self.enable_replay_logging = enable_replay_logging
         self.shards: Dict[str, ShardState] = {}
         self.process_to_shard: Dict[str, str] = {}
         self.session_tokens: Dict[str, Tuple[str, int]] = {}
@@ -101,6 +104,8 @@ class TickEngine:
             defragger=DefragmenterState(pos=defragger_pos),
         )
         self.shards[shard_id] = shard
+        if self.enable_replay_logging:
+            self.persistence.register_replay_shard(shard_id)
         return shard
 
     def join_process(self) -> Tuple[str, str] | None:
@@ -119,6 +124,8 @@ class TickEngine:
         shard.processes[process_id] = proc
         self.process_to_shard[process_id] = shard.shard_id
         self.process_events[process_id] = []
+        shard.pending_spawns.append(process_id)
+        shard.total_processes += 1
         token = str(uuid.uuid4())
         self.session_tokens[token] = (process_id, int(time.time()))
         return token, process_id
@@ -157,6 +164,8 @@ class TickEngine:
 
     def _tick_shard(self, shard: ShardState) -> None:
         shard.tick += 1
+        shard.tick_events = TickEvents(spawns=shard.pending_spawns)
+        shard.pending_spawns = []
         # Liveness restored if any process starts adjacent to defragger
         if any(
             _is_adjacent(p.pos, shard.defragger.pos, shard)
@@ -179,9 +188,11 @@ class TickEngine:
         # Trim SAY traces after tick advancement
         self._trim_old_say_events(shard)
         self._trim_old_echo_tiles(shard)
+        broadcasts_snapshot = list(shard.broadcasts)
         # Clear broadcasts for this tick window
         shard.broadcasts.clear()
         shard.watchdog.restored_this_tick = False
+        self._record_tick_snapshot(shard, broadcasts_snapshot)
         # Shard shutdown invariant
         if len(shard.processes) < self.min_active_processes:
             shard.empty_ticks += 1
@@ -190,6 +201,17 @@ class TickEngine:
         if shard.empty_ticks >= self.empty_shard_ticks:
             for proc in list(shard.processes.values()):
                 self._remove_process(shard, proc)
+            if self.enable_replay_logging:
+                self.persistence.finalize_replay_shard(
+                    shard.shard_id,
+                    total_ticks=shard.tick,
+                    stats={
+                        "total_processes": shard.total_processes,
+                        "total_kills": shard.total_kills,
+                        "total_survivals": shard.total_survivals,
+                        "total_ghosts": shard.total_ghosts,
+                    },
+                )
             self.shards.pop(shard.shard_id, None)
 
     def render_process_view(self, process_id: str) -> Dict:
@@ -276,6 +298,74 @@ class TickEngine:
         shard.echo_tiles = [
             echo for echo in shard.echo_tiles if shard.tick - echo.tick <= max_age
         ]
+
+    def _record_tick_snapshot(self, shard: ShardState, broadcasts_snapshot: List[Broadcast]) -> None:
+        if not self.enable_replay_logging:
+            return
+        snapshot = {
+            "shard_id": shard.shard_id,
+            "tick": shard.tick,
+            "grid_size": GRID_SIZE,
+            "walls": [
+                [edge.a[0], edge.a[1], edge.b[0], edge.b[1]]
+                for edge in sorted(shard.walls_set, key=lambda e: (e.a, e.b))
+            ],
+            "gates": [{"pos": [g.pos[0], g.pos[1]], "type": g.gate_type.value} for g in shard.gates],
+            "processes": [
+                {
+                    "id": p.process_id,
+                    "call_sign": p.call_sign,
+                    "pos": [p.pos[0], p.pos[1]],
+                    "alive": p.alive,
+                    "buffered_cmd": p.buffered.cmd.value,
+                    "buffered_arg": p.buffered.arg,
+                    "los_lock": p.los_lock,
+                    "last_sprint_tick": p.last_sprint_tick,
+                }
+                for p in shard.processes.values()
+            ],
+            "defragger": {
+                "pos": [shard.defragger.pos[0], shard.defragger.pos[1]],
+                "target_id": shard.defragger.target_id,
+                "target_reason": shard.defragger.target_reason,
+            },
+            "watchdog": {
+                "quiet_ticks": shard.watchdog.quiet_ticks,
+                "countdown": shard.watchdog.countdown,
+                "active": shard.watchdog.active,
+                "bonus_step": shard.watchdog.bonus_step,
+            },
+            "broadcasts": [
+                {
+                    "process_id": b.process_id,
+                    "message": b.message,
+                    "timestamp_ms": b.timestamp_ms,
+                }
+                for b in broadcasts_snapshot
+            ],
+            "say_events": [
+                {
+                    "sender_id": ev.sender_id,
+                    "sender_pos": [ev.sender_pos[0], ev.sender_pos[1]],
+                    "message": ev.message,
+                    "recipients": [
+                        {"id": r.process_id, "pos": [r.pos[0], r.pos[1]]}
+                        for r in ev.recipients
+                    ],
+                }
+                for ev in shard.say_events
+            ],
+            "echo_tiles": [
+                {"pos": [e.pos[0], e.pos[1]], "tick": e.tick} for e in shard.echo_tiles
+            ],
+            "events": {
+                "kills": list(shard.tick_events.kills),
+                "survivals": list(shard.tick_events.survivals),
+                "ghosts": list(shard.tick_events.ghosts),
+                "spawns": list(shard.tick_events.spawns),
+            },
+        }
+        self.persistence.record_replay_tick(shard.shard_id, shard.tick, snapshot)
 
     # Internal helpers
 
@@ -401,9 +491,13 @@ class TickEngine:
                 continue
             if gate.gate_type == GateType.STABLE:
                 self.persistence.record_survival(proc.call_sign)
+                shard.tick_events.survivals.append(proc.process_id)
+                shard.total_survivals += 1
                 self._remove_process(shard, proc)
             else:
                 self.persistence.record_ghost(proc.call_sign)
+                shard.tick_events.ghosts.append(proc.process_id)
+                shard.total_ghosts += 1
                 self._transfer_process(shard, proc)
 
     def _resolve_defragger(self, shard: ShardState) -> None:
@@ -433,11 +527,13 @@ class TickEngine:
             candidates = [b for b in shard.broadcasts if b.timestamp_ms == latest_ts]
             target_id = sorted(candidates, key=lambda b: b.process_id)[0].process_id
             bonus = self._broadcast_bonus(shard, target_id)
+            shard.defragger.target_reason = "broadcast"
             return target_id, bonus
         # LOS targeting (lock persists until sprint)
         locked_targets = [p for p in shard.processes.values() if p.los_lock]
         if locked_targets:
             target = sorted(locked_targets, key=lambda p: p.process_id)[0]
+            shard.defragger.target_reason = "los"
             return target.process_id, 0
         los_targets = [
             p
@@ -448,12 +544,16 @@ class TickEngine:
             target = sorted(los_targets, key=lambda p: p.process_id)[0]
             target.los_lock = True
             self._reset_watchdog_on_liveness(shard, reason="los")
+            shard.defragger.target_reason = "los"
             return target.process_id, 0
         # Watchdog bonus
         if shard.watchdog.active:
             bonus = FIBONACCI_ESCALATION[
                 min(shard.watchdog.bonus_step, len(FIBONACCI_ESCALATION) - 1)
             ]
+            shard.defragger.target_reason = "watchdog"
+            return None, bonus
+        shard.defragger.target_reason = "patrol"
         return None, bonus
 
     def _broadcast_bonus(self, shard: ShardState, target_id: str) -> int:
@@ -593,6 +693,8 @@ class TickEngine:
     def _kill_process(self, shard: ShardState, proc: ProcessState) -> None:
         proc.alive = False
         self.persistence.record_death(proc.call_sign)
+        shard.tick_events.kills.append(proc.process_id)
+        shard.total_kills += 1
         ts = int(time.time() * 1000)
         event = Event(
             kind="static_burst",

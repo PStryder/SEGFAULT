@@ -45,3 +45,25 @@ class ChatMessage(BaseModel):
     author: str
     message: str
     timestamp_ms: int
+
+
+class ReplayShardSummary(BaseModel):
+    shard_id: str
+    started_at: int
+    ended_at: int | None = None
+    total_ticks: int
+    total_processes: int
+    total_kills: int
+    total_survivals: int
+    total_ghosts: int
+
+
+class ReplayTickEntry(BaseModel):
+    tick: int
+    snapshot: dict
+
+
+class ReplayResponse(BaseModel):
+    shard_id: str
+    ticks: List[ReplayTickEntry]
+    has_more: bool
