@@ -169,15 +169,22 @@
         showDeath('Process terminated.');
         return;
       }
+      let tickChanged = false;
       if (data.tick !== undefined && data.tick !== null) {
-        if (lastTick !== null && data.tick !== lastTick) {
-          flashTick();
+        const currentTick = Number(data.tick);
+        if (!Number.isNaN(currentTick)) {
+          if (lastTick !== null && currentTick !== lastTick) {
+            tickChanged = true;
+          }
+          lastTick = currentTick;
         }
-        lastTick = data.tick;
       }
       tickEl.textContent = data.tick || 0;
       gridEl.textContent = data.grid || '';
       eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
+      if (tickChanged) {
+        requestAnimationFrame(() => flashTick());
+      }
     }
 
     function flashTick() {
@@ -189,7 +196,7 @@
       document.body.classList.add('tick-flash');
       flashHandle = setTimeout(() => {
         document.body.classList.remove('tick-flash');
-      }, 550);
+      }, 650);
     }
 
     function showDeath(message) {
