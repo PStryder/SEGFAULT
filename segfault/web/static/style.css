@@ -72,6 +72,20 @@ body.tick-flash::after {
   text-decoration: underline;
 }
 
+.button-link {
+  display: inline-block;
+  background: #111;
+  color: #e2e2e2;
+  border: 1px solid #333;
+  padding: 8px 16px;
+  text-decoration: none;
+}
+
+.button-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
