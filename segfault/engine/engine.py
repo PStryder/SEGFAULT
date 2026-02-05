@@ -881,14 +881,9 @@ class TickEngine:
 
 def render_process_grid(shard: ShardState, proc: ProcessState) -> str:
     """Return ASCII grid for the process UI."""
-    # Build visibility set for adjacent cluster
+    # Build visibility set using a multi-source, depth-limited floodfill.
     cluster = _adjacent_cluster(shard, proc.process_id)
-    visible_tiles = set()
-    for pid in cluster:
-        p = shard.processes[pid]
-        visible_tiles.add(p.pos)
-        for tile in adjacent_tiles(p.pos, shard.walls_set):
-            visible_tiles.add(tile)
+    visible_tiles = _visible_tiles_for_cluster(shard, cluster)
     # Bounding box
     min_x = min(t[0] for t in visible_tiles)
     max_x = max(t[0] for t in visible_tiles)
@@ -910,6 +905,25 @@ def render_process_grid(shard: ShardState, proc: ProcessState) -> str:
             row_parts.append(f"[{digit} {label:<5}] ")
         rows.append("".join(row_parts).rstrip())
     return "\n".join(rows)
+
+
+def _visible_tiles_for_cluster(shard: ShardState, cluster: list[str]) -> set[Tile]:
+    positions = [shard.processes[pid].pos for pid in cluster if pid in shard.processes]
+    if not positions:
+        return set()
+    radius = min(4, len(positions))
+    visited = set(positions)
+    queue: deque[tuple[Tile, int]] = deque((pos, 0) for pos in positions)
+    while queue:
+        tile, depth = queue.popleft()
+        if depth >= radius:
+            continue
+        for neighbor in adjacent_tiles(tile, shard.walls_set):
+            if neighbor in visited:
+                continue
+            visited.add(neighbor)
+            queue.append((neighbor, depth + 1))
+    return visited
 
 
 def _digit_for_tile(center: Tile, tile: Tile) -> str | None:
