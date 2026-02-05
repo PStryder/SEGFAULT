@@ -1,3 +1,4 @@
+from segfault.common.constants import GRID_SIZE
 from segfault.engine.drift import drift_walls
 from segfault.engine.engine import TickEngine
 from segfault.engine.geometry import exit_count, is_fully_connected
@@ -41,6 +42,6 @@ def test_drift_preserves_wall_count_and_connectivity():
     after_count = len(shard.walls)
     assert before_count == after_count
     assert is_fully_connected(shard.walls_set)
-    for x in range(20):
-        for y in range(20):
+    for x in range(GRID_SIZE):
+        for y in range(GRID_SIZE):
             assert exit_count((x, y), shard.walls_set) > 0
