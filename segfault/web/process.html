@@ -79,6 +79,8 @@
     let token = null;
     let mode = 'SAY';
     let pollHandle = null;
+    let lastTick = null;
+    let flashHandle = null;
 
     const COMMAND_ALIASES = {
       '/BCAST': 'BROADCAST',
@@ -167,9 +169,27 @@
         showDeath('Process terminated.');
         return;
       }
+      if (data.tick !== undefined && data.tick !== null) {
+        if (lastTick !== null && data.tick !== lastTick) {
+          flashTick();
+        }
+        lastTick = data.tick;
+      }
       tickEl.textContent = data.tick || 0;
       gridEl.textContent = data.grid || '';
       eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
+    }
+
+    function flashTick() {
+      if (flashHandle) {
+        clearTimeout(flashHandle);
+      }
+      document.body.classList.remove('tick-flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('tick-flash');
+      flashHandle = setTimeout(() => {
+        document.body.classList.remove('tick-flash');
+      }, 550);
     }
 
     function showDeath(message) {
