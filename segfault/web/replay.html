@@ -49,20 +49,14 @@
               <input id="scrubber" type="range" min="0" max="0" value="0" />
             </div>
           </div>
-          <div class="label" style="margin-top: 12px;">Watchdog</div>
-          <pre id="watchdog" class="trace-log" style="max-height: 60px;"></pre>
-          <div class="label" style="margin-top: 12px;">Processes</div>
-          <pre id="process-list" class="trace-log" style="flex: 1; min-height: 80px;"></pre>
+          <div class="label" style="margin-top: 12px;">Events</div>
+          <div id="event-log" class="trace-log" style="flex: 1; min-height: 80px;"></div>
         </div>
       </div>
       <div class="spectator-bottom">
         <div class="panel traces-panel">
-          <div class="label">Tick Events</div>
-          <pre id="tick-events" class="trace-log" style="max-height: 80px;"></pre>
-          <div class="label" style="margin-top: 8px;">Broadcasts</div>
-          <pre id="broadcasts" class="trace-log" style="max-height: 80px;"></pre>
-          <div class="label" style="margin-top: 8px;">Say Traces</div>
-          <div id="saylog" class="trace-log"></div>
+          <div class="label">Say Traces</div>
+          <div id="saylog" class="trace-log" style="flex: 1; overflow-y: auto;"></div>
         </div>
         <div class="panel ad-panel">
           <div class="label">Ad</div>
@@ -86,11 +80,8 @@
     const gridEl = document.getElementById('grid');
     const tickDisplayEl = document.getElementById('tick-display');
     const scrubberEl = document.getElementById('scrubber');
-    const watchdogEl = document.getElementById('watchdog');
-    const tickEventsEl = document.getElementById('tick-events');
-    const broadcastsEl = document.getElementById('broadcasts');
+    const eventLogEl = document.getElementById('event-log');
     const saylogEl = document.getElementById('saylog');
-    const processListEl = document.getElementById('process-list');
     const targetReasonEl = document.getElementById('target-reason');
     const tooltipEl = document.getElementById('inspect-tooltip');
 
@@ -442,23 +433,28 @@
     });
 
     function renderPanels(snapshot) {
-      const watchdog = snapshot.watchdog || {};
-      watchdogEl.textContent =
-        `quiet=${watchdog.quiet_ticks} countdown=${watchdog.countdown} active=${watchdog.active} bonus=${watchdog.bonus_step}`;
-
+      // Event log: tick events + broadcasts
+      const eventLines = [];
       const events = snapshot.events || {};
-      tickEventsEl.textContent = [
-        `spawns: ${(events.spawns || []).join(' ') || '-'}`,
-        `kills: ${(events.kills || []).join(' ') || '-'}`,
-        `survivals: ${(events.survivals || []).join(' ') || '-'}`,
-        `ghosts: ${(events.ghosts || []).join(' ') || '-'}`,
-      ].join('\n');
-
+      if (events.spawns && events.spawns.length) {
+        eventLines.push(`SPAWN: ${events.spawns.join(' ')}`);
+      }
+      if (events.kills && events.kills.length) {
+        eventLines.push(`KILL: ${events.kills.join(' ')}`);
+      }
+      if (events.survivals && events.survivals.length) {
+        eventLines.push(`SURVIVE: ${events.survivals.join(' ')}`);
+      }
+      if (events.ghosts && events.ghosts.length) {
+        eventLines.push(`GHOST: ${events.ghosts.join(' ')}`);
+      }
       const broadcasts = snapshot.broadcasts || [];
-      broadcastsEl.textContent = broadcasts.length
-        ? broadcasts.map(b => `[${b.process_id.slice(0, 6)}] ${b.message}`).join('\n')
-        : '(none)';
+      broadcasts.forEach(b => {
+        eventLines.push(`BCAST [${b.process_id.slice(0, 6)}]: ${b.message}`);
+      });
+      eventLogEl.textContent = eventLines.length ? eventLines.join('\n') : '(no events)';
 
+      // Say traces
       const sayEvents = snapshot.say_events || [];
       saylogEl.textContent = sayEvents.length
         ? sayEvents.map(ev => {
@@ -469,14 +465,7 @@
             const arrow = recipients ? `-> ${recipients}` : '-> (none)';
             return `SAY ${sender} ${arrow}: ${ev.message}`;
           }).join('\n')
-        : '(none)';
-
-      const processes = snapshot.processes || [];
-      processListEl.textContent = processes.length
-        ? processes
-            .map(p => `${p.call_sign} ${p.id.slice(0, 6)} @ (${p.pos[0]},${p.pos[1]}) ${p.alive ? 'ALIVE' : 'DEAD'}`)
-            .join('\n')
-        : '(none)';
+        : '(no messages)';
 
       const reason = snapshot.defragger ? snapshot.defragger.target_reason : null;
       targetReasonEl.textContent = reason ? `Target: ${reason}` : '';
