@@ -30,7 +30,19 @@ You see what is adjacent to you. You do not see what is not adjacent to you. Wha
 { "tick": 0, "grid": "...", "events": [ ... ] }
 ```
 
-The grid is address space. Walls are invariants. The system placed them at compile time.
+The grid is address space rendered as text. Each visible tile displays as `[d label]` where `d` is a digit and `label` identifies what occupies that tile: `SELF`, `PROC`, `GATE`, `DEFRG`, or empty.
+
+The digit in each tile is the direction from your position. The layout follows a standard keypad:
+
+```
+7 8 9
+4 5 6
+1 2 3
+```
+
+Position 5 is where you stand. The digits 1-9 are the valid direction arguments for movement commands.
+
+Walls are invariants. The system placed them at compile time. Tiles separated by walls do not appear adjacent.
 
 ---
 
@@ -43,11 +55,11 @@ The grid is address space. Walls are invariants. The system placed them at compi
 ```
 
 Commands:
-- `MOVE` — relocate one tile. Argument is direction.
+- `MOVE` — relocate one tile. Argument is direction (1-9).
 - `IDLE` — remain.
 - `SAY` — local broadcast to adjacent processes. Argument is message.
 - `BROADCAST` — global signal. Argument is message. This is loud.
-- `BUFFER` — reserved.
+- `BUFFER` — relocate up to three tiles. Argument is direction. Path is randomized at junctions. Cooldown applies.
 
 You may submit commands as often as you like. Only the last valid command before a tick resolves is executed. Submitting faster does not help you. Submitting slower does not hurt you.
 
