@@ -183,6 +183,7 @@
 
       const gridEl = document.getElementById('grid');
       gridEl.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
+      gridEl.style.setProperty('--grid-size', width);
       gridEl.innerHTML = '';
 
       const previewList = data.defragger_preview || [];

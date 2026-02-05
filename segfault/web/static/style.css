@@ -4,6 +4,10 @@
   --border: #333;
   --muted: #777;
   --accent: #8fd;
+  --grid-size: 10;
+  --cell-size: 20px;
+  --cell-gap: 2px;
+  --grid-pad: 6px;
 }
 
 body {
@@ -117,15 +121,21 @@ pre {
 
 .grid {
   display: grid;
-  gap: 2px;
+  gap: var(--cell-gap);
   background: #050505;
   border: 1px solid #222;
-  padding: 6px;
+  padding: var(--grid-pad);
+  min-width: calc(
+    (var(--grid-size) * var(--cell-size)) + ((var(--grid-size) - 1) * var(--cell-gap))
+  );
+  min-height: calc(
+    (var(--grid-size) * var(--cell-size)) + ((var(--grid-size) - 1) * var(--cell-gap))
+  );
 }
 
 .grid-cell {
-  width: 20px;
-  height: 20px;
+  width: var(--cell-size);
+  height: var(--cell-size);
   display: flex;
   align-items: center;
   justify-content: center;
