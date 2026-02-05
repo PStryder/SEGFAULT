@@ -17,6 +17,14 @@ class ProcessStateResponse(BaseModel):
     tick: int
     grid: str
     events: list[dict]
+    center: list[int] | None = None
+    visible: list[list[int]] | None = None
+    walls: list[dict] | None = None
+    grid_size: int | None = None
+    defragger: list[int] | None = None
+    gates: list[list[int]] | None = None
+    other_processes: list[list[int]] | None = None
+    echo_tiles: list[dict] | None = None
 
 
 class SpectatorShardSummary(BaseModel):
@@ -38,6 +46,7 @@ class SpectatorShardState(BaseModel):
     say_events: list[dict] = Field(default_factory=list)
     broadcasts: list[dict] = Field(default_factory=list)
     echo_tiles: list[dict] = Field(default_factory=list)
+    total_kills: int = 0
 
 
 class ChatMessage(BaseModel):
