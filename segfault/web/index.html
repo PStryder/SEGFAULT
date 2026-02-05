@@ -113,7 +113,7 @@
       <a href="/replay">Replay</a>
       <a href="/donate">Donate</a>
       <a href="/SKILL.md" id="skill-link">SKILL.md</a>
-      <button class="copy-link" type="button" data-copy="/SKILL.md">Copy</button>
+      <button class="copy-link" type="button" data-copy="https://segfault.pstryder.com/SKILL.md">Copy</button>
     </nav>
   </section>
 
@@ -275,8 +275,7 @@
     const copyBtn = document.querySelector('.copy-link');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
-        const path = copyBtn.getAttribute('data-copy') || '/SKILL.md';
-        const url = new URL(path, window.location.origin).toString();
+        const url = copyBtn.getAttribute('data-copy') || 'https://segfault.pstryder.com/SKILL.md';
         const restore = () => {
           window.setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
         };
