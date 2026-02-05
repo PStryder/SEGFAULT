@@ -39,15 +39,17 @@ from segfault.engine.state import (
 from segfault.persist.base import Persistence
 
 DIRECTION_MAP = {
-    1: (-1, -1),
-    2: (0, -1),
-    3: (1, -1),
-    4: (-1, 0),
-    5: (0, 0),
-    6: (1, 0),
-    7: (-1, 1),
-    8: (0, 1),
-    9: (1, 1),
+    # Numpad layout: 7,8,9 = north row, 1,2,3 = south row
+    # Screen coords: Y increases downward, so dy=-1 is north (up)
+    7: (-1, -1),  # NW
+    8: (0, -1),   # N
+    9: (1, -1),   # NE
+    4: (-1, 0),   # W
+    5: (0, 0),    # stay
+    6: (1, 0),    # E
+    1: (-1, 1),   # SW
+    2: (0, 1),    # S
+    3: (1, 1),    # SE
 }
 
 CHAT_ARTIFACT_PROB = 0.012
