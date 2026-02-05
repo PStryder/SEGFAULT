@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import queue
@@ -7,6 +8,7 @@ import random
 import sqlite3
 import threading
 import time
+import zlib
 from collections.abc import Callable
 from pathlib import Path
 
@@ -16,10 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 class SqlitePersistence(Persistence):
-    def __init__(self, db_path: str) -> None:
+    def __init__(self, db_path: str, replay_compress: bool = False) -> None:
         self.db_path = db_path
-        self._pragmas = ("PRAGMA journal_mode=WAL", "PRAGMA synchronous=NORMAL")
+        self._pragmas = (
+            "PRAGMA journal_mode=WAL",
+            "PRAGMA synchronous=NORMAL",
+            "PRAGMA busy_timeout=5000",
+        )
         self._local = threading.local()
+        self._replay_compress = replay_compress
         self._init_db()
         self._write_queue: queue.Queue[
             tuple[Callable[[sqlite3.Connection], object], threading.Event, dict[str, object]] | None
@@ -282,7 +289,7 @@ class SqlitePersistence(Persistence):
         return lines
 
     def record_replay_tick(self, shard_id: str, tick: int, snapshot: dict) -> None:
-        payload = json.dumps(snapshot, separators=(",", ":"))
+        payload = self._encode_snapshot(snapshot)
         created_at = int(time.time())
 
         def _task(conn: sqlite3.Connection) -> None:
@@ -360,5 +367,20 @@ class SqlitePersistence(Persistence):
         ).fetchall()
         result: list[dict] = []
         for tick, snapshot in rows:
-            result.append({"tick": tick, "snapshot": json.loads(snapshot)})
+            result.append({"tick": tick, "snapshot": self._decode_snapshot(snapshot)})
         return result
+
+    def _encode_snapshot(self, snapshot: dict) -> str:
+        payload = json.dumps(snapshot, separators=(",", ":"))
+        if not self._replay_compress:
+            return payload
+        compressed = zlib.compress(payload.encode("utf-8"))
+        encoded = base64.b64encode(compressed).decode("ascii")
+        return f"zlib:{encoded}"
+
+    def _decode_snapshot(self, payload: str) -> dict:
+        if payload.startswith("zlib:"):
+            encoded = payload.split(":", 1)[1]
+            raw = zlib.decompress(base64.b64decode(encoded)).decode("utf-8")
+            return json.loads(raw)
+        return json.loads(payload)

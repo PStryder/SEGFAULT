@@ -39,6 +39,8 @@ FLAVOR_CHANNELS = {"proc", "spec", "sys"}
 
 persistence: SqlitePersistence | None = None
 engine: TickEngine | None = None
+tick_stop = asyncio.Event()
+tick_task: asyncio.Task | None = None
 
 # Chat connections
 chat_clients: set[WebSocket] = set()
@@ -91,6 +93,24 @@ def _check_api_key(provided: str | None) -> None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
+def _is_allowed_origin(origin: str | None) -> bool:
+    if not origin:
+        return True
+    allowed = [o.rstrip("/") for o in settings.cors_origins]
+    return origin.rstrip("/") in allowed
+
+
+def _prune_rate_limit(
+    store: dict[str, tuple[int, float]], window_seconds: float, now: float
+) -> None:
+    if len(store) < 5000:
+        return
+    cutoff = now - max(window_seconds * 2, 10.0)
+    for key, (_, start) in list(store.items()):
+        if start < cutoff:
+            store.pop(key, None)
+
+
 async def _check_rate_limit(token: str) -> None:
     limit = settings.cmd_rate_limit
     if limit <= 0:
@@ -103,6 +123,7 @@ async def _check_rate_limit(token: str) -> None:
             start = now
         count += 1
         cmd_rate[token] = (count, start)
+        _prune_rate_limit(cmd_rate, settings.cmd_rate_window_seconds, now)
         if count > limit:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limit exceeded"
@@ -121,6 +142,7 @@ async def _check_join_rate(ip: str | None) -> None:
             start = now
         count += 1
         join_rate[ip] = (count, start)
+        _prune_rate_limit(join_rate, settings.join_rate_window_seconds, now)
         if count > limit:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Join rate limit exceeded"
@@ -129,8 +151,8 @@ async def _check_join_rate(ip: str | None) -> None:
 
 @app.on_event("startup")
 async def _startup() -> None:
-    global persistence, engine
-    persistence = SqlitePersistence(settings.db_path)
+    global persistence, engine, tick_task
+    persistence = SqlitePersistence(settings.db_path, replay_compress=settings.replay_compress)
     if persistence.flavor_count() == 0:
         flavor_path = Path(__file__).resolve().parents[1] / "lore" / "flavor.md"
         inserted = persistence.seed_flavor_from_markdown(str(flavor_path))
@@ -145,20 +167,28 @@ async def _startup() -> None:
     )
     engine.create_shard()
     if settings.enable_tick_loop:
-        asyncio.create_task(tick_loop())
+        tick_task = asyncio.create_task(tick_loop(tick_stop))
     else:
         logger.warning("Tick loop disabled via SEGFAULT_ENABLE_TICK_LOOP")
 
 
 @app.on_event("shutdown")
 async def _shutdown() -> None:
+    tick_stop.set()
+    if tick_task:
+        try:
+            await asyncio.wait_for(tick_task, timeout=2.0)
+        except TimeoutError:
+            tick_task.cancel()
+        except Exception:
+            tick_task.cancel()
     if persistence is not None:
         persistence.close()
 
 
-async def tick_loop() -> None:
+async def tick_loop(stop_event: asyncio.Event) -> None:
     game_engine = _get_engine()
-    while True:
+    while not stop_event.is_set():
         # enqueue spectator snapshots (per-shard broadcasters drop stale frames)
         async with spectator_clients_lock:
             shard_queues = {
@@ -176,7 +206,10 @@ async def tick_loop() -> None:
             if not state:
                 continue
             _queue_latest(queue, state)
-        await asyncio.sleep(settings.tick_seconds)
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=settings.tick_seconds)
+        except TimeoutError:
+            pass
 
 
 def _queue_latest(queue: asyncio.Queue[dict[str, object]], state: dict[str, object]) -> None:
@@ -403,6 +436,10 @@ async def replay_detail(
 @app.websocket("/spectate/ws/{shard_id}")
 async def spectate_ws(ws: WebSocket, shard_id: str, key: str | None = None) -> None:
     _check_api_key(key)
+    if not _is_allowed_origin(ws.headers.get("origin")):
+        await ws.accept()
+        await ws.close(code=1008)
+        return
     await ws.accept()
     async with spectator_clients_lock:
         spectator_clients.setdefault(shard_id, set()).add(ws)
@@ -434,6 +471,10 @@ async def spectate_ws(ws: WebSocket, shard_id: str, key: str | None = None) -> N
 @app.websocket("/chat/ws")
 async def chat_ws(ws: WebSocket, key: str | None = None) -> None:
     _check_api_key(key)
+    if not _is_allowed_origin(ws.headers.get("origin")):
+        await ws.accept()
+        await ws.close(code=1008)
+        return
     await ws.accept()
     async with chat_clients_lock:
         chat_clients.add(ws)
