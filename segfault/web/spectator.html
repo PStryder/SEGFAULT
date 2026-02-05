@@ -408,6 +408,12 @@
       }
     };
 
+    document.getElementById('chatinput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('chatsend').click();
+      }
+    });
+
     async function refreshFlavor() {
       try {
         const res = await fetch(`${API_BASE_URL}/flavor/random?channel=spec`, {
