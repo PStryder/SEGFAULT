@@ -37,6 +37,8 @@ class Settings:
     cors_origins: list[str] = _parse_origins(os.getenv("SEGFAULT_CORS_ORIGINS"))
     cmd_rate_limit: int = int(os.getenv("SEGFAULT_CMD_RATE_LIMIT", "20"))
     cmd_rate_window_seconds: float = float(os.getenv("SEGFAULT_CMD_RATE_WINDOW", "1.0"))
+    join_rate_limit: int = int(os.getenv("SEGFAULT_JOIN_RATE_LIMIT", "10"))
+    join_rate_window_seconds: float = float(os.getenv("SEGFAULT_JOIN_RATE_WINDOW", "60"))
     max_total_processes: int = int(os.getenv("SEGFAULT_MAX_TOTAL_PROCESSES", "1000"))
     token_ttl_seconds: int = int(os.getenv("SEGFAULT_TOKEN_TTL_SECONDS", "3600"))
     leaderboard_cache_seconds: int = int(os.getenv("SEGFAULT_LEADERBOARD_CACHE_SECONDS", "300"))

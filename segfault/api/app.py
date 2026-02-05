@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -62,6 +62,8 @@ leaderboard_lock = asyncio.Lock()
 engine_lock = asyncio.Lock()
 rate_limit_lock = asyncio.Lock()
 cmd_rate: Dict[str, Tuple[int, float]] = {}
+join_rate_lock = asyncio.Lock()
+join_rate: Dict[str, Tuple[int, float]] = {}
 
 
 def _get_engine() -> TickEngine:
@@ -103,6 +105,24 @@ async def _check_rate_limit(token: str) -> None:
         if count > limit:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limit exceeded"
+            )
+
+
+async def _check_join_rate(ip: str | None) -> None:
+    limit = settings.join_rate_limit
+    if limit <= 0 or not ip:
+        return
+    now = time.monotonic()
+    async with join_rate_lock:
+        count, start = join_rate.get(ip, (0, now))
+        if now - start >= settings.join_rate_window_seconds:
+            count = 0
+            start = now
+        count += 1
+        join_rate[ip] = (count, start)
+        if count > limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Join rate limit exceeded"
             )
 
 
@@ -219,8 +239,12 @@ async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[Dict[str, object]
 
 
 @app.post("/process/join", response_model=JoinResponse)
-async def join_process(x_api_key: str | None = Header(default=None)) -> JoinResponse:
+async def join_process(
+    request: Request, x_api_key: str | None = Header(default=None)
+) -> JoinResponse:
     _check_api_key(x_api_key)
+    ip = request.client.host if request.client else None
+    await _check_join_rate(ip)
     game_engine = _get_engine()
     async with engine_lock:
         result = game_engine.join_process()

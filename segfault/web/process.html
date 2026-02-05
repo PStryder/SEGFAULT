@@ -50,6 +50,10 @@
     <div class="death-card">
       <h2>PROCESS TERMINATED</h2>
       <p id="death-message">Signal lost. The system reclaimed your thread.</p>
+      <div class="chat-row" style="justify-content:center;">
+        <button id="respawn">Respawn</button>
+        <button id="return-queue">Return to Queue</button>
+      </div>
       <div class="ad-slot">Ad slot (process death)</div>
     </div>
   </div>
@@ -69,6 +73,8 @@
     const flavorEl = document.getElementById('flavor');
     const deathOverlay = document.getElementById('death-screen');
     const deathMessage = document.getElementById('death-message');
+    const respawnBtn = document.getElementById('respawn');
+    const queueBtn = document.getElementById('return-queue');
 
     let token = null;
     let mode = 'SAY';
@@ -174,6 +180,14 @@
       if (pollHandle) clearInterval(pollHandle);
     }
 
+    respawnBtn.onclick = () => {
+      window.location.reload();
+    };
+
+    queueBtn.onclick = () => {
+      window.location.href = '/spectator/queue';
+    };
+
     function parseCommand(raw) {
       const trimmed = raw.trim();
       if (!trimmed) return null;
@@ -233,7 +247,7 @@
     join();
     loadDocs();
     refreshFlavor();
-    setInterval(refreshFlavor, 7000);
+    setInterval(refreshFlavor, 25000);
     pollHandle = setInterval(poll, 1000);
   </script>
 </body>

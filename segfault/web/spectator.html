@@ -23,6 +23,7 @@
     </div>
     <div class="panel">
       <div class="label">Shard View</div>
+      <div id="ws-status" class="status-line">DISCONNECTED</div>
       <div id="grid" class="grid"></div>
     </div>
     <div class="panel">
@@ -66,6 +67,9 @@
     let shardId = null;
     let ws = null;
     let chatWs = null;
+    let reconnectDelay = 1000;
+    let reconnectTimer = null;
+    const statusEl = document.getElementById('ws-status');
 
     async function loadShards() {
       const res = await fetch(`${API_BASE_URL}/spectate/shards`, {
@@ -85,11 +89,28 @@
 
     function connectShard(id) {
       shardId = id;
+      reconnectDelay = 1000;
       if (ws) ws.close();
+      connectSpectatorWs();
+    }
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function connectSpectatorWs() {
+      if (!shardId) return;
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      setStatus('CONNECTING...');
       const wsUrl = API_KEY
         ? `${wsBase}/spectate/ws/${shardId}?key=${encodeURIComponent(API_KEY)}`
         : `${wsBase}/spectate/ws/${shardId}`;
       ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        setStatus('LIVE');
+        reconnectDelay = 1000;
+      };
       ws.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
         if (data.type === 'ping') return;
@@ -113,6 +134,22 @@
           saylog.textContent = '';
         }
       };
+      ws.onclose = () => {
+        setStatus('RECONNECTING...');
+        scheduleReconnect();
+      };
+      ws.onerror = () => {
+        try { ws.close(); } catch (err) { /* no-op */ }
+      };
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectSpectatorWs();
+      }, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, 15000);
     }
 
     function renderGrid(data) {
@@ -132,6 +169,7 @@
       const gates = new Map((data.gates || []).map(g => [g.pos.join(','), g.type]));
       const echoes = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
       const defraggerPos = data.defragger ? data.defragger.join(',') : null;
+      const wallSet = new Set((data.walls || []).map(w => wallKey(w.a, w.b)));
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -154,6 +192,12 @@
           }
           if (previewNext && key === previewNext) {
             cell.classList.add('preview-next');
+          }
+          if (x + 1 < width && wallSet.has(wallKey([x, y], [x + 1, y]))) {
+            cell.classList.add('wall-e');
+          }
+          if (y + 1 < height && wallSet.has(wallKey([x, y], [x, y + 1]))) {
+            cell.classList.add('wall-s');
           }
           cell.textContent = grid[y][x];
           gridEl.appendChild(cell);
@@ -199,6 +243,17 @@
       document.getElementById('inspect').textContent = lines.join('\n');
     }
 
+    function wallKey(a, b) {
+      const ax = a[0];
+      const ay = a[1];
+      const bx = b[0];
+      const by = b[1];
+      if (ax < bx || (ax === bx && ay <= by)) {
+        return `${ax},${ay}|${bx},${by}`;
+      }
+      return `${bx},${by}|${ax},${ay}`;
+    }
+
     function connectChat() {
       const chatUrl = API_KEY
         ? `${wsBase}/chat/ws?key=${encodeURIComponent(API_KEY)}`
@@ -241,7 +296,7 @@
     loadShards();
     connectChat();
     refreshFlavor();
-    setInterval(refreshFlavor, 7000);
+    setInterval(refreshFlavor, 25000);
   </script>
 </body>
 </html>

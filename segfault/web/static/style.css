@@ -136,6 +136,20 @@ pre {
   border-color: #a33;
 }
 
+.grid-cell.wall-e {
+  border-right: 2px solid #444;
+}
+
+.grid-cell.wall-s {
+  border-bottom: 2px solid #444;
+}
+
+.status-line {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 6px;
+}
+
 button,
 input {
   font-family: "Courier New", monospace;

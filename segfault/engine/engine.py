@@ -229,6 +229,10 @@ class TickEngine:
             "defragger": shard.defragger.pos,
             "defragger_target": {"id": target_id, "pos": target_pos} if target_pos else None,
             "defragger_preview": preview,
+            "walls": [
+                {"a": list(edge.a), "b": list(edge.b)}
+                for edge in sorted(shard.walls_set, key=lambda e: (e.a, e.b))
+            ],
             "gates": [{"pos": g.pos, "type": g.gate_type.value} for g in shard.gates],
             "processes": [
                 {
@@ -662,15 +666,21 @@ class TickEngine:
     def _generate_walls(self) -> Dict[int, WallEdge]:
         """Generate a wall set that preserves connectivity and avoids dead cells."""
         edges = edge_slots()
+        target = 80
         for _ in range(500):
-            self.rng.shuffle(edges)
-            selected = edges[:80]
+            selected = self.rng.sample(edges, target)
             walls_set = set(selected)
             # Ensure connectivity and no 0-exit cells
             if self._walls_valid(walls_set):
                 return {i: e for i, e in enumerate(selected)}
-        # Fallback (should be rare)
-        return {i: e for i, e in enumerate(edges[:80])}
+        # Fallback: decrease density until a valid layout exists
+        for count in range(target - 10, -1, -10):
+            for _ in range(200):
+                selected = self.rng.sample(edges, count) if count > 0 else []
+                walls_set = set(selected)
+                if self._walls_valid(walls_set):
+                    return {i: e for i, e in enumerate(selected)}
+        raise RuntimeError("Failed to generate a valid wall layout")
 
     def _generate_gates(self, walls: Dict[int, WallEdge]) -> List[Gate]:
         """Generate a stable gate and a random number of ghost gates."""
@@ -811,12 +821,6 @@ def _tile_label(shard: ShardState, proc: ProcessState, tile: Tile) -> str:
 
 def render_spectator_grid(shard: ShardState) -> List[List[str]]:
     grid = [["." for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-    for wall in shard.walls.values():
-        # Mark walls minimally; UI can render edges differently
-        (x1, y1), (x2, y2) = wall.segment()
-        wx, wy = int(x1), int(y1)
-        if 0 <= wx < GRID_SIZE and 0 <= wy < GRID_SIZE:
-            grid[wy][wx] = "#"
     for gate in shard.gates:
         x, y = gate.pos
         grid[y][x] = "S" if gate.gate_type == GateType.STABLE else "G"

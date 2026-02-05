@@ -31,10 +31,14 @@ class SpectatorShardState(BaseModel):
     tick: int
     grid: List[List[str]]
     defragger: Tuple[int, int]
+    defragger_target: Optional[dict] = None
+    defragger_preview: List[Tuple[int, int]] = Field(default_factory=list)
+    walls: List[dict] = Field(default_factory=list)
     gates: List[dict]
     processes: List[dict]
     watchdog: dict
     say_events: List[dict] = Field(default_factory=list)
+    echo_tiles: List[dict] = Field(default_factory=list)
 
 
 class ChatMessage(BaseModel):
