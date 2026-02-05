@@ -18,35 +18,38 @@
   </header>
 
   <section class="spectator-shell">
-    <div class="panel">
+    <div class="panel shard-index">
       <div class="label">Shard Index</div>
       <div id="shards" class="shard-list"></div>
     </div>
-    <div class="spectator-row">
-      <div class="panel shard-panel">
-        <div class="label">Shard View</div>
-        <div id="ws-status" class="status-line">DISCONNECTED</div>
-        <div id="grid" class="grid"></div>
+    <div class="spectator-main">
+      <div class="spectator-row">
+        <div class="panel shard-panel">
+          <div class="label">Shard View</div>
+          <div id="ws-status" class="status-line">DISCONNECTED</div>
+          <div id="grid" class="grid"></div>
+        </div>
+        <div class="panel chat-panel">
+          <div class="label">Global Chat</div>
+          <div id="chatlog"></div>
+          <div class="chat-row">
+            <input id="chatinput" placeholder="say something" />
+            <button id="chatsend">Send</button>
+          </div>
+        </div>
       </div>
-      <div class="panel chat-panel">
-        <div class="label">Global Chat</div>
-        <div id="chatlog"></div>
+      <div class="spectator-bottom">
+        <div class="panel traces-panel">
+          <div class="label">Say Traces</div>
+          <div id="saylog" class="trace-log"></div>
+        </div>
+        <div class="panel ad-panel">
+          <div class="label">Ad</div>
+          <div id="ad-slot" class="ad-slot">Ad slot (spectator)</div>
+        </div>
       </div>
-    </div>
-    <div class="panel">
-      <div class="label">Say Traces</div>
-      <div id="saylog" class="trace-log"></div>
-    </div>
-    <div class="panel">
-      <div class="label">Ad</div>
-      <div id="ad-slot" class="ad-slot">Ad slot (spectator)</div>
     </div>
   </section>
-
-  <div class="chat-input-bar">
-    <input id="chatinput" placeholder="say something" />
-    <button id="chatsend">Send</button>
-  </div>
 
   <div id="inspect-tooltip" class="inspect-tooltip" role="status" aria-live="polite"></div>
 

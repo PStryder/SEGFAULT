@@ -96,23 +96,36 @@ body.tick-flash::after {
 
 .spectator-shell {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) 1fr;
+  grid-template-columns: 1fr 5fr;
   gap: 12px;
   flex: 1;
   align-content: start;
 }
 
+.spectator-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .spectator-row {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: stretch;
-  min-height: 60vh;
+}
+
+.spectator-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
 }
 
 .spectator-row .panel {
   margin-bottom: 0;
+  height: 100%;
 }
 
 .chat-panel {
@@ -288,20 +301,13 @@ button.active {
   margin-top: auto;
 }
 
-.chat-input-bar {
+.traces-panel {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 12px;
+  flex-direction: column;
 }
 
-.chat-input-bar input {
+.traces-panel .trace-log {
   flex: 1;
-  min-width: 240px;
-  background: #000;
-  color: #e2e2e2;
-  border: 1px solid #333;
-  padding: 8px;
 }
 
 .chat-row input {
@@ -383,6 +389,10 @@ button.active {
   }
 
   .spectator-row {
+    grid-template-columns: 1fr;
+  }
+
+  .spectator-bottom {
     grid-template-columns: 1fr;
   }
 }
