@@ -52,7 +52,7 @@
       <p id="death-message">Signal lost. The system reclaimed your thread.</p>
       <div class="chat-row" style="justify-content:center;">
         <button id="respawn">Respawn</button>
-        <button id="return-queue">Return to Queue</button>
+        <button id="return-queue">Return to Spectate</button>
       </div>
       <div class="ad-slot">Ad slot (process death)</div>
     </div>
@@ -212,7 +212,7 @@
     };
 
     queueBtn.onclick = () => {
-      window.location.href = '/spectator/queue';
+      window.location.href = 'https://segfault.pstryder.com/spectator';
     };
 
     function parseCommand(raw) {
