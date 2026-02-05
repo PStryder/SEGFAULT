@@ -224,9 +224,30 @@ class TickEngine:
             return {}
         events = self.process_events.get(process_id, [])
         self.process_events[process_id] = []
+        cluster = _adjacent_cluster(shard, process_id)
+        visible = _visible_tiles_for_cluster(shard, cluster)
+        visible_walls = [
+            {"a": list(edge.a), "b": list(edge.b)}
+            for edge in sorted(shard.walls_set, key=lambda e: (e.a, e.b))
+            if edge.a in visible or edge.b in visible
+        ]
         return {
             "tick": shard.tick,
             "grid": render_process_grid(shard, proc),
+            "center": list(proc.pos),
+            "visible": [list(t) for t in sorted(visible)],
+            "walls": visible_walls,
+            "grid_size": GRID_SIZE,
+            "defragger": list(shard.defragger.pos) if shard.defragger.pos in visible else None,
+            "gates": [list(g.pos) for g in shard.gates if g.pos in visible],
+            "other_processes": [
+                list(p.pos) for p in shard.processes.values()
+                if p.pos in visible and p.process_id != proc.process_id
+            ],
+            "echo_tiles": [
+                {"pos": list(e.pos), "tick": e.tick}
+                for e in shard.echo_tiles if e.pos in visible
+            ],
             "events": [e.__dict__ for e in events],
         }
 

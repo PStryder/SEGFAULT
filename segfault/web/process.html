@@ -9,6 +9,55 @@
   <link rel="ai-plugin" href="/ai-plugin.json" type="application/json" />
   <link rel="ai-instructions" href="/SKILL.md" type="text/markdown" />
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .direction-wrapper {
+      display: grid;
+      grid-template-columns: 36px auto 36px;
+      grid-template-rows: 36px auto 36px;
+      gap: 4px;
+      align-items: center;
+      justify-items: center;
+      width: fit-content;
+    }
+    .dir-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0a;
+      border: 1px solid #333;
+      color: #666;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+    }
+    .dir-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .dir-btn:active {
+      background: #1a1a1a;
+    }
+    .grid-cell.fog {
+      background: #030303;
+      border-color: #060606;
+    }
+    .grid-cell.boundary {
+      background: #080808;
+      border-color: #0a0a0a;
+      color: #1a1a1a;
+    }
+    .grid-cell.self {
+      color: #fff;
+      border-color: var(--accent);
+      background: #0a1a10;
+    }
+    #grid-fallback {
+      display: none;
+    }
+  </style>
 </head>
 <body class="process">
   <header class="site-header">
@@ -16,7 +65,6 @@
     <div class="status-row">
       <span id="status">Not connected</span>
       <span>Tick <span id="tick">0</span></span>
-      <span>Mode <span id="mode">SAY</span></span>
     </div>
   </header>
 
@@ -34,7 +82,18 @@
     <div class="column">
       <div class="panel">
         <div class="label">Shard View</div>
-        <pre id="grid"></pre>
+        <div class="direction-wrapper">
+          <button class="dir-btn" data-dir="1">↖</button>
+          <button class="dir-btn" data-dir="2">↑</button>
+          <button class="dir-btn" data-dir="3">↗</button>
+          <button class="dir-btn" data-dir="4">←</button>
+          <div id="grid" class="grid"></div>
+          <button class="dir-btn" data-dir="6">→</button>
+          <button class="dir-btn" data-dir="7">↙</button>
+          <button class="dir-btn" data-dir="8">↓</button>
+          <button class="dir-btn" data-dir="9">↘</button>
+        </div>
+        <pre id="grid-fallback"></pre>
       </div>
       <div class="panel">
         <div class="label">Local Log</div>
@@ -46,7 +105,6 @@
   <section class="command-bar">
     <button id="btn-say" class="active">Say</button>
     <button id="btn-bcast">Broadcast</button>
-    <button id="btn-move">Move</button>
     <input id="cmd" placeholder="Say: type a message" />
     <button id="send">Send</button>
   </section>
@@ -67,11 +125,13 @@
     const DEFAULT_API_BASE = 'https://api.segfault.pstryder.com';
     const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
     const API_KEY = window.API_KEY || '';
+    const FOV_RADIUS = 4;
+
     const stateEl = document.getElementById('status');
     const tickEl = document.getElementById('tick');
-    const modeEl = document.getElementById('mode');
     const inputEl = document.getElementById('cmd');
     const gridEl = document.getElementById('grid');
+    const gridFallback = document.getElementById('grid-fallback');
     const eventsEl = document.getElementById('events');
     const docsEl = document.getElementById('docs');
     const docsTitleEl = document.getElementById('docs-title');
@@ -81,41 +141,126 @@
     const respawnBtn = document.getElementById('respawn');
     const queueBtn = document.getElementById('return-queue');
 
-    let token = null;
+    let token = sessionStorage.getItem('segfault_token') || null;
     let mode = 'SAY';
     let pollHandle = null;
     let lastTick = null;
     let flashHandle = null;
 
+    function saveToken(t) {
+      token = t;
+      if (t) {
+        sessionStorage.setItem('segfault_token', t);
+      } else {
+        sessionStorage.removeItem('segfault_token');
+      }
+    }
+
     const COMMAND_ALIASES = {
-      '/BCAST': 'BROADCAST',
-      '/BROADCAST': 'BROADCAST',
-      'BCAST': 'BROADCAST',
-      'BROADCAST': 'BROADCAST',
-      '/MOVE': 'MOVE',
-      'MOVE': 'MOVE',
-      '/BUFFER': 'BUFFER',
-      'BUFFER': 'BUFFER',
-      '/IDLE': 'IDLE',
-      'IDLE': 'IDLE',
-      '/SAY': 'SAY',
-      'SAY': 'SAY'
+      '/BCAST': 'BROADCAST', '/BROADCAST': 'BROADCAST',
+      'BCAST': 'BROADCAST', 'BROADCAST': 'BROADCAST',
+      '/IDLE': 'IDLE', 'IDLE': 'IDLE',
+      '/SAY': 'SAY', 'SAY': 'SAY'
     };
+
+    // --- Helpers ---
+
+    function authHeaders() {
+      const h = API_KEY ? { 'X-API-Key': API_KEY } : {};
+      if (token) h['Authorization'] = `Bearer ${token}`;
+      return h;
+    }
+
+    function wallKey(a, b) {
+      const ax = a[0], ay = a[1], bx = b[0], by = b[1];
+      if (ax < bx || (ax === bx && ay <= by)) return `${ax},${ay}|${bx},${by}`;
+      return `${bx},${by}|${ax},${ay}`;
+    }
 
     function setMode(next) {
       mode = next;
-      modeEl.textContent = next;
       document.getElementById('btn-say').classList.toggle('active', next === 'SAY');
       document.getElementById('btn-bcast').classList.toggle('active', next === 'BROADCAST');
-      document.getElementById('btn-move').classList.toggle('active', next === 'MOVE');
-      if (next === 'MOVE') {
-        inputEl.placeholder = 'Move: enter 1-9';
-      } else if (next === 'BROADCAST') {
-        inputEl.placeholder = '/BCAST your message';
-      } else {
-        inputEl.placeholder = 'Say: type a message';
+      inputEl.placeholder = next === 'BROADCAST'
+        ? '/BCAST your message'
+        : 'Say: type a message';
+    }
+
+    // --- Movement ---
+
+    async function sendMove(dir) {
+      if (!token) return;
+      await fetch(`${API_BASE_URL}/process/cmd`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ cmd: 'MOVE', arg: String(dir) })
+      });
+    }
+
+    // --- Grid Rendering ---
+
+    function renderProcessGrid(data) {
+      const cx = data.center[0];
+      const cy = data.center[1];
+      const gs = data.grid_size;
+      const visibleSet = new Set(data.visible.map(v => v.join(',')));
+      const otherProcs = new Set((data.other_processes || []).map(p => p.join(',')));
+      const gateSet = new Set((data.gates || []).map(g => g.join(',')));
+      const echoSet = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
+      const defraggerKey = data.defragger ? data.defragger.join(',') : null;
+      const wallSet = new Set((data.walls || []).map(w => wallKey(w.a, w.b)));
+
+      const minX = cx - FOV_RADIUS;
+      const maxX = cx + FOV_RADIUS;
+      const minY = cy - FOV_RADIUS;
+      const maxY = cy + FOV_RADIUS;
+      const width = maxX - minX + 1;
+
+      gridEl.style.gridTemplateColumns = `repeat(${width}, var(--cell-size))`;
+      gridEl.innerHTML = '';
+      gridEl.style.display = '';
+      gridFallback.style.display = 'none';
+
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const key = `${x},${y}`;
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell';
+
+          if (x < 0 || x >= gs || y < 0 || y >= gs) {
+            cell.classList.add('boundary');
+          } else if (!visibleSet.has(key)) {
+            cell.classList.add('fog');
+          } else if (x === cx && y === cy) {
+            cell.classList.add('self');
+            cell.textContent = '@';
+          } else if (key === defraggerKey) {
+            cell.classList.add('defragger');
+            cell.textContent = 'D';
+          } else if (otherProcs.has(key)) {
+            cell.classList.add('process');
+            cell.textContent = 'P';
+          } else if (gateSet.has(key)) {
+            cell.classList.add('gate');
+            cell.textContent = '?';
+          } else if (echoSet.has(key)) {
+            cell.classList.add('echo');
+            cell.textContent = 'E';
+          } else {
+            cell.textContent = '.';
+          }
+
+          if (x >= 0 && x < gs && y >= 0 && y < gs && visibleSet.has(key)) {
+            if (wallSet.has(wallKey([x, y], [x + 1, y]))) cell.classList.add('wall-e');
+            if (wallSet.has(wallKey([x, y], [x, y + 1]))) cell.classList.add('wall-s');
+          }
+
+          gridEl.appendChild(cell);
+        }
       }
     }
+
+    // --- Docs & Flavor ---
 
     async function loadDocs() {
       try {
@@ -124,9 +269,7 @@
         const data = await res.json();
         docsTitleEl.textContent = data.title || 'SYSTEM NOTICE';
         docsEl.textContent = (data.lines || []).join('\n');
-      } catch (err) {
-        // No-op: docs are optional
-      }
+      } catch (err) {}
     }
 
     async function refreshFlavor() {
@@ -136,77 +279,92 @@
         });
         if (!res.ok || res.status === 204) return;
         const data = await res.json();
-        if (data && data.text) {
-          flavorEl.textContent = data.text;
-        }
-      } catch (err) {
-        // Silent fail
-      }
+        if (data && data.text) flavorEl.textContent = data.text;
+      } catch (err) {}
     }
+
+    // --- Join & Poll ---
 
     async function join() {
       const res = await fetch(`${API_BASE_URL}/process/join`, {
         method: 'POST',
         headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
       });
-      if (!res.ok) {
-        showDeath('Unable to join shard.');
-        return;
-      }
+      if (!res.ok) { showDeath('Unable to join shard.'); return; }
       const data = await res.json();
-      token = data.token;
+      saveToken(data.token);
       stateEl.textContent = 'Connected';
       await poll();
     }
 
-    async function poll() {
-      if (!token) return;
-      const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      let res;
+    async function tryReconnect() {
+      // Try to use existing token from sessionStorage
+      if (!token) return false;
       try {
-        res = await fetch(`${API_BASE_URL}/process/state`, { headers });
+        const res = await fetch(`${API_BASE_URL}/process/state`, { headers: authHeaders() });
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data || (!data.grid && !data.center)) return false;
+        // Token still valid, we're reconnected
+        stateEl.textContent = 'Reconnected';
+        return true;
       } catch (err) {
-        showDeath('Connection lost.');
-        return;
-      }
-      if (!res.ok) {
-        showDeath('Process terminated.');
-        return;
-      }
-      const data = await res.json();
-      if (!data || !data.grid) {
-        showDeath('Process terminated.');
-        return;
-      }
-      let tickChanged = false;
-      if (data.tick !== undefined && data.tick !== null) {
-        const currentTick = Number(data.tick);
-        if (!Number.isNaN(currentTick)) {
-          if (lastTick !== null && currentTick !== lastTick) {
-            tickChanged = true;
-          }
-          lastTick = currentTick;
-        }
-      }
-      tickEl.textContent = data.tick || 0;
-      gridEl.textContent = data.grid || '';
-      eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
-      if (tickChanged) {
-        requestAnimationFrame(() => flashTick());
+        return false;
       }
     }
 
-    function flashTick() {
-      if (flashHandle) {
-        clearTimeout(flashHandle);
+    async function init() {
+      if (await tryReconnect()) {
+        // Successfully reconnected with existing token
+        await poll();
+      } else {
+        // No valid token, join as new process
+        saveToken(null);
+        await join();
       }
+    }
+
+    async function poll() {
+      if (!token) return;
+      let res;
+      try {
+        res = await fetch(`${API_BASE_URL}/process/state`, { headers: authHeaders() });
+      } catch (err) { showDeath('Connection lost.'); return; }
+      if (!res.ok) { showDeath('Process terminated.'); return; }
+      const data = await res.json();
+      if (!data || (!data.grid && !data.center)) {
+        showDeath('Process terminated.');
+        return;
+      }
+
+      let tickChanged = false;
+      if (data.tick != null) {
+        const t = Number(data.tick);
+        if (!Number.isNaN(t)) {
+          if (lastTick !== null && t !== lastTick) tickChanged = true;
+          lastTick = t;
+        }
+      }
+      tickEl.textContent = data.tick || 0;
+
+      if (data.center && data.visible) {
+        renderProcessGrid(data);
+      } else {
+        gridEl.style.display = 'none';
+        gridFallback.style.display = '';
+        gridFallback.textContent = data.grid || '';
+      }
+
+      eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
+      if (tickChanged) requestAnimationFrame(() => flashTick());
+    }
+
+    function flashTick() {
+      if (flashHandle) clearTimeout(flashHandle);
       document.body.classList.remove('tick-flash');
       void document.body.offsetWidth;
       document.body.classList.add('tick-flash');
-      flashHandle = setTimeout(() => {
-        document.body.classList.remove('tick-flash');
-      }, 650);
+      flashHandle = setTimeout(() => document.body.classList.remove('tick-flash'), 650);
     }
 
     function showDeath(message) {
@@ -214,16 +372,14 @@
       deathMessage.textContent = message;
       deathOverlay.classList.add('active');
       stateEl.textContent = 'Disconnected';
+      saveToken(null);
       if (pollHandle) clearInterval(pollHandle);
     }
 
-    respawnBtn.onclick = () => {
-      window.location.reload();
-    };
+    respawnBtn.onclick = () => window.location.reload();
+    queueBtn.onclick = () => { window.location.href = 'https://segfault.pstryder.com/spectator'; };
 
-    queueBtn.onclick = () => {
-      window.location.href = 'https://segfault.pstryder.com/spectator';
-    };
+    // --- Command Input ---
 
     function parseCommand(raw) {
       const trimmed = raw.trim();
@@ -233,55 +389,56 @@
       if (COMMAND_ALIASES[head]) {
         return { cmd: COMMAND_ALIASES[head], arg: parts.slice(1).join(' ') || null };
       }
-      if (mode === 'MOVE') {
-        return { cmd: 'MOVE', arg: parts[0] || null };
-      }
-      if (mode === 'BROADCAST') {
-        return { cmd: 'BROADCAST', arg: trimmed };
-      }
+      if (mode === 'BROADCAST') return { cmd: 'BROADCAST', arg: trimmed };
       return { cmd: 'SAY', arg: trimmed };
     }
 
     async function sendCmd() {
       if (!token) return;
-      const raw = inputEl.value;
-      const payload = parseCommand(raw);
+      const payload = parseCommand(inputEl.value);
       if (!payload) return;
-      const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
       await fetch(`${API_BASE_URL}/process/cmd`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload)
       });
       inputEl.value = '';
-      if (mode !== 'SAY') {
-        setMode('SAY');
-      }
+      if (mode !== 'SAY') setMode('SAY');
     }
 
     document.getElementById('send').onclick = sendCmd;
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendCmd();
-    });
+    inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCmd(); });
 
-    document.getElementById('btn-say').onclick = () => {
-      setMode('SAY');
-      inputEl.focus();
-    };
+    document.getElementById('btn-say').onclick = () => { setMode('SAY'); inputEl.focus(); };
     document.getElementById('btn-bcast').onclick = () => {
       setMode('BROADCAST');
       inputEl.value = '/BCAST ';
       inputEl.focus();
     };
-    document.getElementById('btn-move').onclick = () => {
-      setMode('MOVE');
-      inputEl.value = '/MOVE ';
-      inputEl.focus();
-    };
+
+    // --- Direction Buttons + Keyboard ---
+
+    document.querySelectorAll('.dir-btn').forEach(btn => {
+      btn.onclick = () => sendMove(btn.dataset.dir);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (document.activeElement === inputEl) return;
+      const dirMap = {
+        'Numpad1': '1', 'Numpad2': '2', 'Numpad3': '3',
+        'Numpad4': '4', 'Numpad6': '6',
+        'Numpad7': '7', 'Numpad8': '8', 'Numpad9': '9',
+        'ArrowUp': '2', 'ArrowDown': '8',
+        'ArrowLeft': '4', 'ArrowRight': '6',
+      };
+      const dir = dirMap[e.code];
+      if (dir) { e.preventDefault(); sendMove(dir); }
+    });
+
+    // --- Init ---
 
     setMode('SAY');
-    join();
+    init();
     loadDocs();
     refreshFlavor();
     setInterval(refreshFlavor, 25000);
