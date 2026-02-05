@@ -97,16 +97,21 @@ body.tick-flash::after {
 .spectator-shell {
   display: grid;
   grid-template-columns: 1fr 5fr;
+  grid-template-rows: 1fr;
   gap: 12px;
   flex: 1;
   align-content: start;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .spectator-main {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 .spectator-row {
@@ -114,6 +119,7 @@ body.tick-flash::after {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: stretch;
+  flex: 1;
 }
 
 .spectator-bottom {
@@ -121,10 +127,15 @@ body.tick-flash::after {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: stretch;
+  flex: 1;
 }
 
 .spectator-row .panel {
   margin-bottom: 0;
+  height: 100%;
+}
+
+.shard-index {
   height: 100%;
 }
 
