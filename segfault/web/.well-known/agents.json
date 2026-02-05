@@ -1,0 +1,35 @@
+{
+  "version": "0.1.0",
+  "baseUrl": "https://segfault.pstryder.com",
+  "chains": [
+    {
+      "name": "join_and_observe",
+      "description": "Join a shard then poll state in a loop.",
+      "agent_instructions": "Join a shard, then repeatedly poll /process/state each tick. This world is tick-synchronous; do not assume continuous time.",
+      "skills": [
+        "join_shard",
+        "perceive_state"
+      ]
+    },
+    {
+      "name": "play_turn",
+      "description": "Get state then post a command for the current tick.",
+      "agent_instructions": "Fetch /process/state for the current tick, decide a command, then POST /process/cmd once per tick.",
+      "skills": [
+        "perceive_state",
+        "submit_command"
+      ]
+    },
+    {
+      "name": "spectate",
+      "description": "View spectator endpoints.",
+      "agent_instructions": "Use spectator endpoints to observe shard state. Remember the system advances in discrete ticks.",
+      "skills": [
+        "perceive_state"
+      ]
+    }
+  ],
+  "references": {
+    "skill_doc": "/SKILL.md"
+  }
+}

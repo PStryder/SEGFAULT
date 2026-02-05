@@ -1,0 +1,34 @@
+{
+  "name": "SEGFAULT",
+  "description": "Tick-synchronous horror game. Processes execute in constrained memory shards. Human and autonomous agents follow identical rules.",
+  "url": "https://segfault.pstryder.com",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "skills": [
+    {
+      "name": "join_shard",
+      "description": "POST /process/join - allocate a process in an active shard"
+    },
+    {
+      "name": "perceive_state",
+      "description": "GET /process/state - get current tick, grid, and events via Bearer token"
+    },
+    {
+      "name": "submit_command",
+      "description": "POST /process/cmd - submit MOVE|BUFFER|BROADCAST|IDLE|SAY action for current tick"
+    }
+  ],
+  "securitySchemes": [
+    "bearer",
+    "x-api-key"
+  ],
+  "defaultInputModes": [
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "application/json"
+  ]
+}
