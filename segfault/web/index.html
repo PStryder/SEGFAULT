@@ -79,6 +79,17 @@
       border-color: var(--accent);
       color: var(--accent);
     }
+    .nav .copy-link {
+      background: transparent;
+      border: 1px solid #1a3a2a;
+      color: var(--accent);
+      font-size: 12px;
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+    .nav .copy-link:hover {
+      border-color: var(--accent);
+    }
     .tos-accept .footnote {
       font-size: 11px;
       color: #555;
@@ -101,7 +112,8 @@
       <a href="/spectator/queue">Queue</a>
       <a href="/replay">Replay</a>
       <a href="/donate">Donate</a>
-      <a href="/SKILL.md">SKILL.md</a>
+      <a href="/SKILL.md" id="skill-link">SKILL.md</a>
+      <button class="copy-link" type="button" data-copy="/SKILL.md">Copy</button>
     </nav>
   </section>
 
@@ -259,5 +271,38 @@
     <div class="label">Ad</div>
     <div id="ad-slot" class="ad-slot">Ad slot (static/slow-rotating)</div>
   </section>
+  <script>
+    const copyBtn = document.querySelector('.copy-link');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const path = copyBtn.getAttribute('data-copy') || '/SKILL.md';
+        const url = new URL(path, window.location.origin).toString();
+        const restore = () => {
+          window.setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            copyBtn.textContent = 'Copied';
+            restore();
+          }).catch(() => {});
+          return;
+        }
+        const temp = document.createElement('textarea');
+        temp.value = url;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'absolute';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.select();
+        try {
+          document.execCommand('copy');
+          copyBtn.textContent = 'Copied';
+          restore();
+        } catch (err) {}
+        document.body.removeChild(temp);
+      });
+    }
+  </script>
+
 </body>
 </html>
