@@ -743,7 +743,8 @@ class TickEngine:
             self.process_events.setdefault(pid, []).append(event)
         # Watchdog reset condition: kill
         shard.watchdog = self._reset_watchdog_on_liveness(shard, reason="kill")
-        self._remove_process(shard, proc)
+        # Preserve token so the client can render a clean death state.
+        self._remove_process(shard, proc, preserve_tokens=True)
 
     def _remove_process(
         self, shard: ShardState, proc: ProcessState, preserve_tokens: bool = False
