@@ -117,7 +117,6 @@
   </section>
 
   <section class="command-bar">
-    <button id="btn-say" class="active">Say</button>
     <button id="btn-bcast">Broadcast</button>
     <input id="cmd" placeholder="Say: type a message" />
     <button id="send">Send</button>
@@ -160,6 +159,12 @@
     let lastTick = null;
     let flashHandle = null;
     let seenEventKeys = new Set();
+    const TICK_MS = 10000;
+    const DEFRAGGER_REVEAL_MS = TICK_MS / 2;
+    let defraggerRevealed = true;
+    let defraggerRevealTimer = null;
+    let currentProcessData = null;
+    let pendingKillEvents = [];
     const MAX_LOG_LINES = 200;
 
     function saveToken(t) {
@@ -194,7 +199,6 @@
 
     function setMode(next) {
       mode = next;
-      document.getElementById('btn-say').classList.toggle('active', next === 'SAY');
       document.getElementById('btn-bcast').classList.toggle('active', next === 'BROADCAST');
       inputEl.placeholder = next === 'BROADCAST'
         ? '/BCAST your message'
@@ -234,7 +238,7 @@
       const otherProcs = new Set((data.other_processes || []).map(p => p.join(',')));
       const gateSet = new Set((data.gates || []).map(g => g.join(',')));
       const echoSet = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
-      const defraggerKey = data.defragger ? data.defragger.join(',') : null;
+      const defraggerKey = defraggerRevealed && data.defragger ? data.defragger.join(',') : null;
       const wallSet = new Set((data.walls || []).map(w => wallKey(w.a, w.b)));
 
       const minX = cx - FOV_RADIUS;
@@ -391,6 +395,23 @@
       }
       tickEl.textContent = data.tick || 0;
 
+      if (tickChanged) {
+        defraggerRevealed = false;
+        if (defraggerRevealTimer) clearTimeout(defraggerRevealTimer);
+        defraggerRevealTimer = setTimeout(() => {
+          defraggerRevealed = true;
+          if (currentProcessData && currentProcessData.center && currentProcessData.visible) {
+            renderProcessGrid(currentProcessData);
+          }
+          if (pendingKillEvents.length) {
+            appendEvents(pendingKillEvents, lastTick);
+            pendingKillEvents = [];
+          }
+        }, DEFRAGGER_REVEAL_MS);
+      }
+
+      currentProcessData = data;
+
       if (data.center && data.visible) {
         document.querySelector('.direction-wrapper').style.display = '';
         gridFallback.style.display = 'none';
@@ -401,7 +422,21 @@
         gridFallback.textContent = data.grid || '';
       }
 
-      appendEvents(data.events || [], data.tick);
+      // Split events: hold kill events until defragger reveal
+      const events = data.events || [];
+      if (defraggerRevealed) {
+        appendEvents(events, data.tick);
+      } else {
+        const immediate = [];
+        events.forEach(e => {
+          if (/kill|terminat/i.test(e.message)) {
+            pendingKillEvents.push(e);
+          } else {
+            immediate.push(e);
+          }
+        });
+        appendEvents(immediate, data.tick);
+      }
       if (tickChanged) {
         flashTick();
         clearQueuedMove();
@@ -476,7 +511,6 @@
     document.getElementById('send').onclick = sendCmd;
     inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCmd(); });
 
-    document.getElementById('btn-say').onclick = () => { setMode('SAY'); inputEl.focus(); };
     document.getElementById('btn-bcast').onclick = () => {
       setMode('BROADCAST');
       inputEl.value = '/BCAST ';

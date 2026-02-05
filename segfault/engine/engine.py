@@ -175,6 +175,9 @@ class TickEngine:
         # Step 1: process actions resolve (pre-drift topology)
         moves = self._resolve_process_actions(shard)
         self._apply_process_moves(shard, moves)
+        # Clear buffered commands after processing (no persistent movement)
+        for proc in shard.processes.values():
+            proc.buffered = Command(CommandType.IDLE)
         # Gate interactions resolve pre-drift
         self._resolve_gate_interactions(shard)
         # Step 2: drift
