@@ -85,6 +85,10 @@
   <section class="process-shell">
     <div class="column">
       <div class="panel">
+        <div class="label">Queued Movement</div>
+        <div id="queued-move" style="font-size: 24px; text-align: center; padding: 8px 0;">—</div>
+      </div>
+      <div class="panel">
         <div class="label" id="docs-title">SYSTEM NOTICE</div>
         <pre id="docs"></pre>
       </div>
@@ -199,13 +203,25 @@
 
     // --- Movement ---
 
+    const DIR_ARROWS = {
+      '1': '↙', '2': '↓', '3': '↘',
+      '4': '←', '5': '•', '6': '→',
+      '7': '↖', '8': '↑', '9': '↗'
+    };
+    const queuedMoveEl = document.getElementById('queued-move');
+
     async function sendMove(dir) {
       if (!token) return;
+      queuedMoveEl.textContent = DIR_ARROWS[dir] || dir;
       await fetch(`${API_BASE_URL}/process/cmd`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ cmd: 'MOVE', arg: String(dir) })
       });
+    }
+
+    function clearQueuedMove() {
+      queuedMoveEl.textContent = '—';
     }
 
     // --- Grid Rendering ---
@@ -386,7 +402,10 @@
       }
 
       appendEvents(data.events || [], data.tick);
-      if (tickChanged) flashTick();
+      if (tickChanged) {
+        flashTick();
+        clearQueuedMove();
+      }
     }
 
     function appendEvents(events, tick) {

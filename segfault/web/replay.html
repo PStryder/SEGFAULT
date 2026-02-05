@@ -60,6 +60,24 @@
     .replay-footer .ad-slot {
       margin: 0;
     }
+    .controls-panel .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .controls-panel .chat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .controls-panel .chat-row button {
+      padding: 6px 16px;
+    }
+    .controls-panel .chat-row input[type="range"] {
+      flex: 1;
+      min-width: 120px;
+    }
   </style>
 </head>
 <body class="spectator replay">
@@ -368,7 +386,7 @@
 
     function renderGrid(snapshot) {
       const size = snapshot.grid_size || 20;
-      gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+      gridEl.style.gridTemplateColumns = `repeat(${size}, var(--cell-size))`;
       gridEl.style.setProperty('--grid-size', size);
       gridEl.innerHTML = '';
       hideTooltip();
