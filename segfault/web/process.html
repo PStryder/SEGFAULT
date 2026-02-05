@@ -144,9 +144,14 @@
         method: 'POST',
         headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
       });
+      if (!res.ok) {
+        showDeath('Unable to join shard.');
+        return;
+      }
       const data = await res.json();
       token = data.token;
       stateEl.textContent = 'Connected';
+      await poll();
     }
 
     async function poll() {
