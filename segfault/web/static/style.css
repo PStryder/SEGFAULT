@@ -99,10 +99,17 @@ body.tick-flash::after {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  align-items: stretch;
 }
 
 .spectator-row .panel {
   margin-bottom: 0;
+}
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .column {
@@ -241,7 +248,9 @@ button.active {
 }
 
 #chatlog {
-  max-height: 200px;
+  flex: 1;
+  min-height: 240px;
+  max-height: none;
   overflow-y: auto;
   background: #000;
   padding: 8px;
@@ -253,6 +262,10 @@ button.active {
   gap: 8px;
   align-items: center;
   margin-top: 8px;
+}
+
+.chat-panel .chat-row {
+  margin-top: auto;
 }
 
 .chat-row input {
@@ -269,6 +282,21 @@ button.active {
   font-style: italic;
   max-width: 720px;
   white-space: pre-wrap;
+}
+
+.inspect-tooltip {
+  position: fixed;
+  display: none;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: #050505;
+  border: 1px solid #444;
+  color: #e2e2e2;
+  font-size: 11px;
+  white-space: pre-wrap;
+  z-index: 1200;
+  pointer-events: none;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
 #saylog {

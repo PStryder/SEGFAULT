@@ -23,12 +23,12 @@
       <div id="shards" class="shard-list"></div>
     </div>
     <div class="spectator-row">
-      <div class="panel">
+      <div class="panel shard-panel">
         <div class="label">Shard View</div>
         <div id="ws-status" class="status-line">DISCONNECTED</div>
         <div id="grid" class="grid"></div>
       </div>
-      <div class="panel">
+      <div class="panel chat-panel">
         <div class="label">Global Chat</div>
         <div id="chatlog"></div>
         <div class="chat-row">
@@ -36,10 +36,6 @@
           <button id="chatsend">Send</button>
         </div>
       </div>
-    </div>
-    <div class="panel">
-      <div class="label">Inspect</div>
-      <pre id="inspect">Click a tile to inspect.</pre>
     </div>
     <div class="panel">
       <div class="label">Watchdog</div>
@@ -58,6 +54,8 @@
       <div id="ad-slot" class="ad-slot">Ad slot (spectator)</div>
     </div>
   </section>
+
+  <div id="inspect-tooltip" class="inspect-tooltip" role="status" aria-live="polite"></div>
 
   <script>
     const DEFAULT_API_BASE = 'https://api.segfault.pstryder.com';
@@ -185,6 +183,7 @@
       gridEl.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
       gridEl.style.setProperty('--grid-size', width);
       gridEl.innerHTML = '';
+      hideTooltip();
 
       const previewList = data.defragger_preview || [];
       const preview = new Set(previewList.map(pos => pos.join(',')));
@@ -233,11 +232,11 @@
         if (!target) return;
         const cx = Number(target.dataset.x);
         const cy = Number(target.dataset.y);
-        updateInspect(cx, cy, data);
+        showTooltipForTile(cx, cy, data, target);
       };
     }
 
-    function updateInspect(x, y, data) {
+    function showTooltipForTile(x, y, data, anchorEl) {
       const key = `${x},${y}`;
       const lines = [`Tile (${x}, ${y})`];
       if (data.defragger && data.defragger.join(',') === key) {
@@ -262,10 +261,45 @@
         }
       }
       if (lines.length === 1) {
-        lines.push('Empty');
+        hideTooltip();
+        return;
       }
-      document.getElementById('inspect').textContent = lines.join('\n');
+      renderTooltip(lines, anchorEl);
     }
+
+    const tooltipEl = document.getElementById('inspect-tooltip');
+
+    function renderTooltip(lines, anchorEl) {
+      tooltipEl.textContent = lines.join('\n');
+      tooltipEl.style.display = 'block';
+      const rect = anchorEl.getBoundingClientRect();
+      const padding = 8;
+      let left = rect.right + padding;
+      let top = rect.top;
+      tooltipEl.style.left = `${left}px`;
+      tooltipEl.style.top = `${top}px`;
+      const tipRect = tooltipEl.getBoundingClientRect();
+      if (tipRect.right > window.innerWidth - padding) {
+        left = rect.left - tipRect.width - padding;
+      }
+      if (left < padding) {
+        left = padding;
+      }
+      if (tipRect.bottom > window.innerHeight - padding) {
+        top = Math.max(padding, window.innerHeight - tipRect.height - padding);
+      }
+      tooltipEl.style.left = `${left}px`;
+      tooltipEl.style.top = `${top}px`;
+    }
+
+    function hideTooltip() {
+      tooltipEl.style.display = 'none';
+    }
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('.grid-cell')) return;
+      hideTooltip();
+    });
 
     function wallKey(a, b) {
       const ax = a[0];
