@@ -77,19 +77,31 @@
     const MAX_SEEN = 500;
 
     async function loadShards() {
-      const res = await fetch(`${API_BASE_URL}/spectate/shards`, {
-        headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
-      });
-      const data = await res.json();
-      const container = document.getElementById('shards');
-      container.innerHTML = '';
-      data.forEach(s => {
-        const btn = document.createElement('button');
-        btn.textContent = `Shard ${s.shard_id.slice(0,6)} (${s.process_count})`;
-        btn.onclick = () => connectShard(s.shard_id);
-        container.appendChild(btn);
-      });
-      if (!shardId && data.length) connectShard(data[0].shard_id);
+      try {
+        const res = await fetch(`${API_BASE_URL}/spectate/shards`, {
+          headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
+        });
+        const data = await res.json();
+        const container = document.getElementById('shards');
+        container.innerHTML = '';
+        let currentShardExists = false;
+        data.forEach(s => {
+          const btn = document.createElement('button');
+          btn.textContent = `Shard ${s.shard_id.slice(0,6)} (${s.process_count})`;
+          btn.onclick = () => connectShard(s.shard_id);
+          if (shardId && s.shard_id === shardId) {
+            btn.classList.add('active');
+            currentShardExists = true;
+          }
+          container.appendChild(btn);
+        });
+        // Only auto-connect if no shard selected, or current shard was deleted
+        if ((!shardId || !currentShardExists) && data.length) {
+          connectShard(data[0].shard_id);
+        }
+      } catch (err) {
+        // Silent fail - will retry on next tick
+      }
     }
 
     function connectShard(id) {
@@ -151,6 +163,7 @@
       if (data && typeof data.tick === 'number') {
         if (lastTick !== null && data.tick !== lastTick) {
           refreshFlavor();
+          loadShards();
         }
         lastTick = data.tick;
       }
