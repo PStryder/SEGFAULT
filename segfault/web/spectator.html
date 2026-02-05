@@ -253,7 +253,7 @@
       if (!height || !width) return;
 
       const gridEl = document.getElementById('grid');
-      gridEl.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
+      gridEl.style.gridTemplateColumns = `repeat(${width}, var(--cell-size))`;
       gridEl.style.setProperty('--grid-size', width);
       gridEl.innerHTML = '';
       hideTooltip();
@@ -314,6 +314,9 @@
       const lines = [`Tile (${x}, ${y})`];
       if (data.defragger && data.defragger.join(',') === key) {
         lines.push('Defragmenter');
+        if (typeof data.total_kills === 'number') {
+          lines.push(`PIDs TERM: ${data.total_kills}`);
+        }
       }
       const proc = (data.processes || []).find(p => p.pos.join(',') === key);
       if (proc) {

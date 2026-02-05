@@ -287,6 +287,7 @@ class TickEngine:
                 for ev in shard.say_events
             ],
             "echo_tiles": [{"pos": echo.pos, "tick": echo.tick} for echo in shard.echo_tiles],
+            "total_kills": shard.total_kills,
         }
 
     def _trim_old_say_events(self, shard: ShardState) -> None:

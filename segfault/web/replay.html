@@ -17,65 +17,62 @@
   </header>
 
   <section class="spectator-shell">
-    <div class="panel">
+    <div class="panel shard-index">
       <div class="label">Replay Shards</div>
       <div id="replay-list" class="shard-list"></div>
     </div>
-
-    <div class="panel">
-      <div class="label">Playback</div>
-      <div class="controls">
-        <div class="chat-row">
-          <button id="play">Play</button>
-          <button id="pause">Pause</button>
-          <button id="step-back">Step -</button>
-          <button id="step-forward">Step +</button>
+    <div class="spectator-main">
+      <div class="spectator-row">
+        <div class="panel shard-panel">
+          <div class="label">Replay View</div>
+          <div id="tick-display" class="status-line">Tick 0</div>
+          <div id="grid" class="grid"></div>
+          <div id="target-reason" class="status-line"></div>
         </div>
-        <div class="chat-row">
-          <span>Speed</span>
-          <button class="speed" data-speed="0.5">0.5x</button>
-          <button class="speed active" data-speed="1">1x</button>
-          <button class="speed" data-speed="2">2x</button>
-          <button class="speed" data-speed="4">4x</button>
+        <div class="panel controls-panel">
+          <div class="label">Playback Controls</div>
+          <div class="controls">
+            <div class="chat-row">
+              <button id="play">Play</button>
+              <button id="pause">Pause</button>
+              <button id="step-back">Step -</button>
+              <button id="step-forward">Step +</button>
+            </div>
+            <div class="chat-row">
+              <span>Speed</span>
+              <button class="speed" data-speed="0.5">0.5x</button>
+              <button class="speed active" data-speed="1">1x</button>
+              <button class="speed" data-speed="2">2x</button>
+              <button class="speed" data-speed="4">4x</button>
+            </div>
+            <div class="chat-row">
+              <input id="scrubber" type="range" min="0" max="0" value="0" />
+            </div>
+          </div>
+          <div class="label" style="margin-top: 12px;">Watchdog</div>
+          <pre id="watchdog" class="trace-log" style="max-height: 60px;"></pre>
+          <div class="label" style="margin-top: 12px;">Processes</div>
+          <pre id="process-list" class="trace-log" style="flex: 1; min-height: 80px;"></pre>
         </div>
-        <div class="chat-row">
-          <input id="scrubber" type="range" min="0" max="0" value="0" />
-          <span id="tick-display">Tick 0</span>
+      </div>
+      <div class="spectator-bottom">
+        <div class="panel traces-panel">
+          <div class="label">Tick Events</div>
+          <pre id="tick-events" class="trace-log" style="max-height: 80px;"></pre>
+          <div class="label" style="margin-top: 8px;">Broadcasts</div>
+          <pre id="broadcasts" class="trace-log" style="max-height: 80px;"></pre>
+          <div class="label" style="margin-top: 8px;">Say Traces</div>
+          <div id="saylog" class="trace-log"></div>
+        </div>
+        <div class="panel ad-panel">
+          <div class="label">Ad</div>
+          <div id="ad-slot" class="ad-slot">Ad slot (replay)</div>
         </div>
       </div>
     </div>
-
-    <div class="panel">
-      <div class="label">Replay Grid</div>
-      <div id="grid" class="grid"></div>
-      <div id="target-reason" class="status-line"></div>
-    </div>
-
-    <div class="panel">
-      <div class="label">Watchdog</div>
-      <pre id="watchdog"></pre>
-    </div>
-
-    <div class="panel">
-      <div class="label">Tick Events</div>
-      <pre id="tick-events"></pre>
-    </div>
-
-    <div class="panel">
-      <div class="label">Broadcasts</div>
-      <pre id="broadcasts"></pre>
-    </div>
-
-    <div class="panel">
-      <div class="label">Say Traces</div>
-      <pre id="saylog"></pre>
-    </div>
-
-    <div class="panel">
-      <div class="label">Process List</div>
-      <pre id="process-list"></pre>
-    </div>
   </section>
+
+  <div id="inspect-tooltip" class="inspect-tooltip" role="status" aria-live="polite"></div>
 
   <script>
     const DEFAULT_API_BASE = 'https://api.segfault.pstryder.com';
@@ -83,6 +80,7 @@
     const API_KEY = window.API_KEY || '';
     const TICK_SECONDS = 10;
     const CHUNK_SIZE = 100;
+    const SHARD_PAGE_SIZE = 50;
 
     const replayListEl = document.getElementById('replay-list');
     const gridEl = document.getElementById('grid');
@@ -94,9 +92,14 @@
     const saylogEl = document.getElementById('saylog');
     const processListEl = document.getElementById('process-list');
     const targetReasonEl = document.getElementById('target-reason');
+    const tooltipEl = document.getElementById('inspect-tooltip');
 
     let selectedShard = null;
     let shardMeta = {};
+    let allShards = [];
+    let shardsLoaded = 0;
+    let shardsHasMore = true;
+    let shardsLoading = false;
 
     class ReplayPlayer {
       constructor() {
@@ -212,34 +215,85 @@
 
     const player = new ReplayPlayer();
 
-    async function loadReplayList() {
+    async function loadReplayList(append = false) {
+      if (shardsLoading || (!append && !shardsHasMore)) return;
+      shardsLoading = true;
+
       const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
-      const res = await fetch(`${API_BASE_URL}/replays`, { headers });
-      if (!res.ok) return;
+      const limit = append ? SHARD_PAGE_SIZE : Math.max(SHARD_PAGE_SIZE, shardsLoaded + SHARD_PAGE_SIZE);
+      const res = await fetch(`${API_BASE_URL}/replays?limit=${limit}`, { headers });
+      if (!res.ok) {
+        shardsLoading = false;
+        return;
+      }
       const data = await res.json();
       const shards = data.shards || [];
-      replayListEl.innerHTML = '';
-      shards.forEach(shard => {
-        const btn = document.createElement('button');
-        const shortId = shard.shard_id.slice(0, 6);
-        const end = shard.ended_at ? new Date(shard.ended_at * 1000).toLocaleString() : 'LIVE';
-        btn.textContent = `Shard ${shortId} | ticks ${shard.total_ticks} | proc ${shard.total_processes} | end ${end}`;
-        btn.onclick = () => selectShard(shard);
-        replayListEl.appendChild(btn);
-      });
-      const params = new URLSearchParams(window.location.search);
-      const shardParam = params.get('shard');
-      if (shardParam) {
-        const match = shards.find(s => s.shard_id === shardParam);
-        if (match) {
-          selectShard(match, Number(params.get('tick') || 0));
+
+      if (append) {
+        // Append new shards that we haven't seen
+        const newShards = shards.slice(shardsLoaded);
+        allShards = allShards.concat(newShards);
+        newShards.forEach(shard => renderShardButton(shard));
+      } else {
+        allShards = shards;
+        replayListEl.innerHTML = '';
+        shards.forEach(shard => renderShardButton(shard));
+      }
+
+      shardsLoaded = allShards.length;
+      shardsHasMore = shards.length >= limit;
+      shardsLoading = false;
+
+      // Handle URL params on initial load
+      if (!append) {
+        const params = new URLSearchParams(window.location.search);
+        const shardParam = params.get('shard');
+        if (shardParam) {
+          const match = allShards.find(s => s.shard_id === shardParam);
+          if (match) {
+            selectShard(match, Number(params.get('tick') || 0));
+          }
         }
       }
     }
 
+    function renderShardButton(shard) {
+      const btn = document.createElement('button');
+      const shortId = shard.shard_id.slice(0, 6);
+      const end = shard.ended_at ? new Date(shard.ended_at * 1000).toLocaleString() : 'LIVE';
+      btn.textContent = `${shortId} | T${shard.total_ticks} | P${shard.total_processes}`;
+      btn.title = `Shard ${shard.shard_id}\nTicks: ${shard.total_ticks}\nProcesses: ${shard.total_processes}\nKills: ${shard.total_kills}\nSurvivals: ${shard.total_survivals}\nEnded: ${end}`;
+      btn.onclick = () => selectShard(shard);
+      if (selectedShard === shard.shard_id) {
+        btn.classList.add('active');
+      }
+      btn.dataset.shardId = shard.shard_id;
+      replayListEl.appendChild(btn);
+    }
+
+    function updateShardButtons() {
+      replayListEl.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.shardId === selectedShard) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    // Infinite scroll for shard list
+    replayListEl.addEventListener('scroll', () => {
+      if (shardsLoading || !shardsHasMore) return;
+      const { scrollTop, scrollHeight, clientHeight } = replayListEl;
+      if (scrollHeight - scrollTop - clientHeight < 50) {
+        loadReplayList(true);
+      }
+    });
+
     async function selectShard(shard, startTick = 0) {
       selectedShard = shard.shard_id;
       shardMeta = shard;
+      updateShardButtons();
       await player.loadShard(shard.shard_id, shard.total_ticks || 0);
       if (startTick > 0) {
         await player.seekTo(startTick);
@@ -258,7 +312,7 @@
 
     function renderCurrent() {
       scrubberEl.value = player.currentTick;
-      tickDisplayEl.textContent = `Tick ${player.currentTick}`;
+      tickDisplayEl.textContent = `Tick ${player.currentTick} / ${player.totalTicks}`;
       updateUrl();
       const snapshot = player.snapshot();
       if (!snapshot) {
@@ -272,7 +326,9 @@
     function renderGrid(snapshot) {
       const size = snapshot.grid_size || 20;
       gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+      gridEl.style.setProperty('--grid-size', size);
       gridEl.innerHTML = '';
+      hideTooltip();
 
       const wallSet = new Set((snapshot.walls || []).map(w => wallKey([w[0], w[1]], [w[2], w[3]])));
       const processMap = new Map((snapshot.processes || []).map(p => [p.pos.join(','), p]));
@@ -315,12 +371,80 @@
           gridEl.appendChild(cell);
         }
       }
+
+      gridEl.onclick = (event) => {
+        const target = event.target.closest('.grid-cell');
+        if (!target) return;
+        const cx = Number(target.dataset.x);
+        const cy = Number(target.dataset.y);
+        showTooltipForTile(cx, cy, snapshot, target);
+      };
     }
+
+    function showTooltipForTile(x, y, snapshot, anchorEl) {
+      const key = `${x},${y}`;
+      const lines = [`Tile (${x}, ${y})`];
+      const defraggerPos = snapshot.defragger && snapshot.defragger.pos ? snapshot.defragger.pos.join(',') : null;
+      if (defraggerPos === key) {
+        lines.push('Defragmenter');
+      }
+      const proc = (snapshot.processes || []).find(p => p.pos.join(',') === key);
+      if (proc) {
+        lines.push(`Process ${proc.id.slice(0, 8)}`);
+        lines.push(`Call sign: ${proc.call_sign}`);
+        lines.push(proc.alive ? 'ALIVE' : 'DEAD');
+      }
+      const gate = (snapshot.gates || []).find(g => g.pos.join(',') === key);
+      if (gate) {
+        lines.push(`Gate ${gate.type.toUpperCase()}`);
+      }
+      const echo = (snapshot.echo_tiles || []).find(e => e.pos.join(',') === key);
+      if (echo) {
+        lines.push(`Echo @ tick ${echo.tick}`);
+      }
+      if (lines.length === 1) {
+        hideTooltip();
+        return;
+      }
+      renderTooltip(lines, anchorEl);
+    }
+
+    function renderTooltip(lines, anchorEl) {
+      tooltipEl.textContent = lines.join('\n');
+      tooltipEl.style.display = 'block';
+      const rect = anchorEl.getBoundingClientRect();
+      const padding = 8;
+      let left = rect.right + padding;
+      let top = rect.top;
+      tooltipEl.style.left = `${left}px`;
+      tooltipEl.style.top = `${top}px`;
+      const tipRect = tooltipEl.getBoundingClientRect();
+      if (tipRect.right > window.innerWidth - padding) {
+        left = rect.left - tipRect.width - padding;
+      }
+      if (left < padding) {
+        left = padding;
+      }
+      if (tipRect.bottom > window.innerHeight - padding) {
+        top = Math.max(padding, window.innerHeight - tipRect.height - padding);
+      }
+      tooltipEl.style.left = `${left}px`;
+      tooltipEl.style.top = `${top}px`;
+    }
+
+    function hideTooltip() {
+      tooltipEl.style.display = 'none';
+    }
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('.grid-cell')) return;
+      hideTooltip();
+    });
 
     function renderPanels(snapshot) {
       const watchdog = snapshot.watchdog || {};
       watchdogEl.textContent =
-        `Watchdog: quiet=${watchdog.quiet_ticks} countdown=${watchdog.countdown} active=${watchdog.active} bonus=${watchdog.bonus_step}`;
+        `quiet=${watchdog.quiet_ticks} countdown=${watchdog.countdown} active=${watchdog.active} bonus=${watchdog.bonus_step}`;
 
       const events = snapshot.events || {};
       tickEventsEl.textContent = [
@@ -333,7 +457,7 @@
       const broadcasts = snapshot.broadcasts || [];
       broadcastsEl.textContent = broadcasts.length
         ? broadcasts.map(b => `[${b.process_id.slice(0, 6)}] ${b.message}`).join('\n')
-        : '';
+        : '(none)';
 
       const sayEvents = snapshot.say_events || [];
       saylogEl.textContent = sayEvents.length
@@ -345,17 +469,17 @@
             const arrow = recipients ? `-> ${recipients}` : '-> (none)';
             return `SAY ${sender} ${arrow}: ${ev.message}`;
           }).join('\n')
-        : '';
+        : '(none)';
 
       const processes = snapshot.processes || [];
       processListEl.textContent = processes.length
         ? processes
             .map(p => `${p.call_sign} ${p.id.slice(0, 6)} @ (${p.pos[0]},${p.pos[1]}) ${p.alive ? 'ALIVE' : 'DEAD'}`)
             .join('\n')
-        : '';
+        : '(none)';
 
       const reason = snapshot.defragger ? snapshot.defragger.target_reason : null;
-      targetReasonEl.textContent = reason ? `Target reason: ${reason}` : '';
+      targetReasonEl.textContent = reason ? `Target: ${reason}` : '';
     }
 
     function wallKey(a, b) {
