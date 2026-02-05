@@ -1,22 +1,23 @@
-app = "segfault-api"
-primary_region = "iad"
+# fly.toml app configuration file generated for segfault-api on 2026-02-05T14:29:16Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'segfault-api'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
-
-[env]
-  SEGFAULT_DB_PATH = "/data/segfault.db"
-  SEGFAULT_ENABLE_TICK_LOOP = "1"
-  SEGFAULT_REPLAY_LOGGING = "1"
-  SEGFAULT_REPLAY_COMPRESS = "0"
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
+  processes = ['app']
 
-[[mounts]]
-  source = "segfault_data"
-  destination = "/data"
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512
