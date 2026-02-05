@@ -4,6 +4,17 @@
   <meta charset="utf-8" />
   <title>SEGFAULT - Replay</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .replay-footer {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .replay-footer .ad-slot {
+      margin: 0;
+    }
+  </style>
 </head>
 <body class="spectator">
   <header class="site-header">
@@ -28,6 +39,8 @@
           <div id="tick-display" class="status-line">Tick 0</div>
           <div id="grid" class="grid"></div>
           <div id="target-reason" class="status-line"></div>
+          <div class="label" style="margin-top: 12px;">Say Traces</div>
+          <div id="saylog" class="trace-log" style="flex: 1; overflow-y: auto; min-height: 80px;"></div>
         </div>
         <div class="panel controls-panel">
           <div class="label">Playback Controls</div>
@@ -53,18 +66,12 @@
           <div id="event-log" class="trace-log" style="flex: 1; min-height: 80px;"></div>
         </div>
       </div>
-      <div class="spectator-bottom">
-        <div class="panel traces-panel">
-          <div class="label">Say Traces</div>
-          <div id="saylog" class="trace-log" style="flex: 1; overflow-y: auto;"></div>
-        </div>
-        <div class="panel ad-panel">
-          <div class="label">Ad</div>
-          <div id="ad-slot" class="ad-slot">Ad slot (replay)</div>
-        </div>
-      </div>
     </div>
   </section>
+
+  <footer class="replay-footer">
+    <div id="ad-slot" class="ad-slot">Ad slot (replay)</div>
+  </footer>
 
   <div id="inspect-tooltip" class="inspect-tooltip" role="status" aria-live="polite"></div>
 
