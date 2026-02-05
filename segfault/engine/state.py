@@ -72,6 +72,7 @@ class ShardState:
     broadcasts: List[Broadcast] = field(default_factory=list)
     say_events: List[SayEvent] = field(default_factory=list)
     echo_tiles: List[EchoTile] = field(default_factory=list)
+    noise_burst_remaining: int = 0
     tick: int = 0
     watchdog: WatchdogState = field(default_factory=WatchdogState)
     empty_ticks: int = 0

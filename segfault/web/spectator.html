@@ -23,7 +23,11 @@
     </div>
     <div class="panel">
       <div class="label">Shard View</div>
-      <pre id="grid"></pre>
+      <div id="grid" class="grid"></div>
+    </div>
+    <div class="panel">
+      <div class="label">Inspect</div>
+      <pre id="inspect">Click a tile to inspect.</pre>
     </div>
     <div class="panel">
       <div class="label">Watchdog</div>
@@ -89,8 +93,7 @@
       ws.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
         if (data.type === 'ping') return;
-        const gridText = data.grid.map(row => row.join(' ')).join('\n');
-        document.getElementById('grid').textContent = gridText;
+        renderGrid(data);
         if (data.watchdog) {
           document.getElementById('watchdog').textContent =
             `Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`;
@@ -110,6 +113,90 @@
           saylog.textContent = '';
         }
       };
+    }
+
+    function renderGrid(data) {
+      const grid = data.grid || [];
+      const height = grid.length;
+      const width = grid[0] ? grid[0].length : 0;
+      if (!height || !width) return;
+
+      const gridEl = document.getElementById('grid');
+      gridEl.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
+      gridEl.innerHTML = '';
+
+      const previewList = data.defragger_preview || [];
+      const preview = new Set(previewList.map(pos => pos.join(',')));
+      const previewNext = previewList.length ? previewList[0].join(',') : null;
+      const processes = new Map((data.processes || []).map(p => [p.pos.join(','), p.id]));
+      const gates = new Map((data.gates || []).map(g => [g.pos.join(','), g.type]));
+      const echoes = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
+      const defraggerPos = data.defragger ? data.defragger.join(',') : null;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const key = `${x},${y}`;
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          if (key === defraggerPos) {
+            cell.classList.add('defragger');
+          } else if (processes.has(key)) {
+            cell.classList.add('process');
+          } else if (gates.has(key)) {
+            cell.classList.add('gate');
+          } else if (echoes.has(key)) {
+            cell.classList.add('echo');
+          }
+          if (preview.has(key)) {
+            cell.classList.add('preview');
+          }
+          if (previewNext && key === previewNext) {
+            cell.classList.add('preview-next');
+          }
+          cell.textContent = grid[y][x];
+          gridEl.appendChild(cell);
+        }
+      }
+
+      gridEl.onclick = (event) => {
+        const target = event.target.closest('.grid-cell');
+        if (!target) return;
+        const cx = Number(target.dataset.x);
+        const cy = Number(target.dataset.y);
+        updateInspect(cx, cy, data);
+      };
+    }
+
+    function updateInspect(x, y, data) {
+      const key = `${x},${y}`;
+      const lines = [`Tile (${x}, ${y})`];
+      if (data.defragger && data.defragger.join(',') === key) {
+        lines.push('Defragmenter');
+      }
+      const proc = (data.processes || []).find(p => p.pos.join(',') === key);
+      if (proc) {
+        lines.push(`Process ${proc.id.slice(0, 8)}`);
+      }
+      const gate = (data.gates || []).find(g => g.pos.join(',') === key);
+      if (gate) {
+        lines.push(`Gate ${gate.type.toUpperCase()}`);
+      }
+      const echo = (data.echo_tiles || []).find(e => e.pos.join(',') === key);
+      if (echo) {
+        lines.push(`Echo @ tick ${echo.tick}`);
+      }
+      if (data.defragger_target && data.defragger_target.pos) {
+        const tpos = data.defragger_target.pos.join(',');
+        if (tpos === key) {
+          lines.push('Targeted');
+        }
+      }
+      if (lines.length === 1) {
+        lines.push('Empty');
+      }
+      document.getElementById('inspect').textContent = lines.join('\n');
     }
 
     function connectChat() {

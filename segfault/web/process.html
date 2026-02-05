@@ -46,6 +46,14 @@
     <button id="send">Send</button>
   </section>
 
+  <div id="death-screen" class="death-overlay">
+    <div class="death-card">
+      <h2>PROCESS TERMINATED</h2>
+      <p id="death-message">Signal lost. The system reclaimed your thread.</p>
+      <div class="ad-slot">Ad slot (process death)</div>
+    </div>
+  </div>
+
   <script>
     const DEFAULT_API_BASE = 'https://segfault.pstryder.com';
     const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
@@ -59,9 +67,12 @@
     const docsEl = document.getElementById('docs');
     const docsTitleEl = document.getElementById('docs-title');
     const flavorEl = document.getElementById('flavor');
+    const deathOverlay = document.getElementById('death-screen');
+    const deathMessage = document.getElementById('death-message');
 
     let token = null;
     let mode = 'SAY';
+    let pollHandle = null;
 
     const COMMAND_ALIASES = {
       '/BCAST': 'BROADCAST',
@@ -134,11 +145,33 @@
       if (!token) return;
       const headers = API_KEY ? { 'X-API-Key': API_KEY } : {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE_URL}/process/state`, { headers });
+      let res;
+      try {
+        res = await fetch(`${API_BASE_URL}/process/state`, { headers });
+      } catch (err) {
+        showDeath('Connection lost.');
+        return;
+      }
+      if (!res.ok) {
+        showDeath('Process terminated.');
+        return;
+      }
       const data = await res.json();
+      if (!data || !data.grid) {
+        showDeath('Process terminated.');
+        return;
+      }
       tickEl.textContent = data.tick || 0;
       gridEl.textContent = data.grid || '';
       eventsEl.textContent = (data.events || []).map(e => e.message).join('\n');
+    }
+
+    function showDeath(message) {
+      if (deathOverlay.classList.contains('active')) return;
+      deathMessage.textContent = message;
+      deathOverlay.classList.add('active');
+      stateEl.textContent = 'Disconnected';
+      if (pollHandle) clearInterval(pollHandle);
     }
 
     function parseCommand(raw) {
@@ -201,7 +234,7 @@
     loadDocs();
     refreshFlavor();
     setInterval(refreshFlavor, 7000);
-    setInterval(poll, 1000);
+    pollHandle = setInterval(poll, 1000);
   </script>
 </body>
 </html>

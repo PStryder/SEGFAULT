@@ -84,6 +84,58 @@ pre {
   white-space: pre-wrap;
 }
 
+.grid {
+  display: grid;
+  gap: 2px;
+  background: #050505;
+  border: 1px solid #222;
+  padding: 6px;
+}
+
+.grid-cell {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border: 1px solid #111;
+  font-size: 11px;
+  color: #777;
+  cursor: pointer;
+}
+
+.grid-cell.process {
+  color: #cfd;
+  border-color: #1c3;
+}
+
+.grid-cell.defragger {
+  color: #f66;
+  border-color: #a22;
+}
+
+.grid-cell.gate {
+  color: #6cf;
+  border-color: #246;
+}
+
+.grid-cell.echo {
+  color: #999;
+  border-color: #333;
+  font-style: italic;
+}
+
+.grid-cell.preview {
+  background: #221;
+  border-color: #663;
+}
+
+.grid-cell.preview-next {
+  background: #311;
+  border-color: #a33;
+}
+
 button,
 input {
   font-family: "Courier New", monospace;
@@ -160,6 +212,34 @@ button.active {
   color: #666;
   padding: 10px;
   text-align: center;
+}
+
+.death-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 5, 0.95);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.death-overlay.active {
+  display: flex;
+}
+
+.death-card {
+  border: 1px solid #444;
+  background: #000;
+  padding: 24px;
+  max-width: 560px;
+  text-align: center;
+}
+
+.death-card h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  color: #f66;
 }
 
 @media (max-width: 900px) {

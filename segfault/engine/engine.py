@@ -50,8 +50,9 @@ DIRECTION_MAP = {
     9: (1, 1),
 }
 
-CHAT_ARTIFACT_PROB = 0.015
+CHAT_ARTIFACT_PROB = 0.012
 CHAT_ARTIFACTS = ("...", "[STATIC]")
+CHAT_ARTIFACT_BURST_MAX = 3
 SAY_EVENT_TTL_TICKS = 3
 ECHO_TTL_TICKS = 4
 SPRINT_COOLDOWN_TICKS = 1
@@ -212,10 +213,22 @@ class TickEngine:
         shard = self.shards.get(shard_id)
         if not shard:
             return {}
+        target_id = shard.defragger.target_id
+        target_pos = (
+            shard.processes[target_id].pos
+            if target_id and target_id in shard.processes
+            else None
+        )
+        preview: List[Tile] = []
+        if target_pos:
+            path = self._bfs_path(shard, shard.defragger.pos, target_pos)
+            preview = path[1:4]
         return {
             "tick": shard.tick,
             "grid": render_spectator_grid(shard),
             "defragger": shard.defragger.pos,
+            "defragger_target": {"id": target_id, "pos": target_pos} if target_pos else None,
+            "defragger_preview": preview,
             "gates": [{"pos": g.pos, "type": g.gate_type.value} for g in shard.gates],
             "processes": [
                 {
@@ -553,7 +566,7 @@ class TickEngine:
         if not recipients_by_pid:
             return
         for proc in recipients_by_pid:
-            if self.rng.random() < CHAT_ARTIFACT_PROB:
+            if self._should_emit_chat_artifact(shard):
                 artifact = self.rng.choice(CHAT_ARTIFACTS)
                 self.process_events.setdefault(proc.process_id, []).append(
                     Event(kind="noise", message=artifact, timestamp_ms=ts)
@@ -563,6 +576,15 @@ class TickEngine:
             self.process_events.setdefault(proc.process_id, []).append(
                 Event(kind="local", message=text, timestamp_ms=ts)
             )
+
+    def _should_emit_chat_artifact(self, shard: ShardState) -> bool:
+        if shard.noise_burst_remaining > 0:
+            shard.noise_burst_remaining -= 1
+            return True
+        if self.rng.random() < CHAT_ARTIFACT_PROB:
+            shard.noise_burst_remaining = max(0, self.rng.randint(1, CHAT_ARTIFACT_BURST_MAX) - 1)
+            return True
+        return False
 
     def _kill_process(self, shard: ShardState, proc: ProcessState) -> None:
         proc.alive = False
