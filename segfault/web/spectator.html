@@ -31,29 +31,22 @@
       <div class="panel chat-panel">
         <div class="label">Global Chat</div>
         <div id="chatlog"></div>
-        <div class="chat-row">
-          <input id="chatinput" placeholder="say something" />
-          <button id="chatsend">Send</button>
-        </div>
       </div>
     </div>
     <div class="panel">
-      <div class="label">Watchdog</div>
-      <pre id="watchdog"></pre>
-    </div>
-    <div class="panel">
       <div class="label">Say Traces</div>
-      <pre id="saylog"></pre>
-    </div>
-    <div class="panel">
-      <div class="label">Flavor</div>
-      <div id="flavor"></div>
+      <div id="saylog" class="trace-log"></div>
     </div>
     <div class="panel">
       <div class="label">Ad</div>
       <div id="ad-slot" class="ad-slot">Ad slot (spectator)</div>
     </div>
   </section>
+
+  <div class="chat-input-bar">
+    <input id="chatinput" placeholder="say something" />
+    <button id="chatsend">Send</button>
+  </div>
 
   <div id="inspect-tooltip" class="inspect-tooltip" role="status" aria-live="polite"></div>
 
@@ -71,6 +64,15 @@
     let reconnectDelay = 1000;
     let reconnectTimer = null;
     const statusEl = document.getElementById('ws-status');
+    const chatLogEl = document.getElementById('chatlog');
+    const sayLogEl = document.getElementById('saylog');
+    let lastTick = null;
+    let lastWatchdogTick = null;
+    const seenSayEvents = new Set();
+    const seenSayOrder = [];
+    const seenBroadcasts = new Set();
+    const seenBroadcastOrder = [];
+    const MAX_SEEN = 500;
 
     async function loadShards() {
       const res = await fetch(`${API_BASE_URL}/spectate/shards`, {
@@ -144,23 +146,79 @@
 
     function handleSpectatorData(data) {
       renderGrid(data);
-      if (data.watchdog) {
-        document.getElementById('watchdog').textContent =
-          `Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`;
+      if (data && typeof data.tick === 'number') {
+        if (lastTick !== null && data.tick !== lastTick) {
+          refreshFlavor();
+        }
+        lastTick = data.tick;
       }
-      const saylog = document.getElementById('saylog');
+      if (data.watchdog && typeof data.tick === 'number' && data.tick !== lastWatchdogTick) {
+        appendSayTrace(
+          `[SYSTEM] Watchdog: quiet=${data.watchdog.quiet_ticks} countdown=${data.watchdog.countdown} active=${data.watchdog.active} bonus=${data.watchdog.bonus_step}`
+        );
+        lastWatchdogTick = data.tick;
+      }
       if (data.say_events && data.say_events.length) {
-        const lines = data.say_events.map(ev => {
+        data.say_events.forEach(ev => {
           const sender = ev.sender_pos ? `(${ev.sender_pos[0]},${ev.sender_pos[1]})` : '(?)';
           const recipients = (ev.recipients || [])
             .map(r => r.pos ? `(${r.pos[0]},${r.pos[1]})` : '(?)')
             .join(' ');
           const arrow = recipients ? `-> ${recipients}` : '-> (none)';
-          return `SAY ${sender} ${arrow}: ${ev.message}`;
+          const key = `S|${ev.tick}|${ev.sender_id}|${ev.message}|${recipients}`;
+          if (recordSeen(key, seenSayEvents, seenSayOrder)) {
+            appendSayTrace(`SAY ${sender} ${arrow}: ${ev.message}`);
+          }
         });
-        saylog.textContent = lines.join('\n');
-      } else {
-        saylog.textContent = '';
+      }
+      if (data.broadcasts && data.broadcasts.length) {
+        data.broadcasts.forEach(ev => {
+          const tick = typeof data.tick === 'number' ? data.tick : 0;
+          const key = `B|${tick}|${ev.process_id}|${ev.timestamp_ms}|${ev.message}`;
+          if (recordSeen(key, seenBroadcasts, seenBroadcastOrder)) {
+            appendSayTrace(`BCAST ${ev.process_id.slice(0, 8)}: ${ev.message}`);
+          }
+        });
+      }
+    }
+
+    function recordSeen(key, seenSet, seenOrder) {
+      if (seenSet.has(key)) {
+        return false;
+      }
+      seenSet.add(key);
+      seenOrder.push(key);
+      if (seenOrder.length > MAX_SEEN) {
+        const oldest = seenOrder.shift();
+        if (oldest) {
+          seenSet.delete(oldest);
+        }
+      }
+      return true;
+    }
+
+    function isNearBottom(el) {
+      const threshold = 24;
+      return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+    }
+
+    function appendChatLine(text) {
+      const shouldScroll = isNearBottom(chatLogEl);
+      const line = document.createElement('div');
+      line.textContent = text;
+      chatLogEl.appendChild(line);
+      if (shouldScroll) {
+        chatLogEl.scrollTop = chatLogEl.scrollHeight;
+      }
+    }
+
+    function appendSayTrace(text) {
+      const shouldScroll = isNearBottom(sayLogEl);
+      const line = document.createElement('div');
+      line.textContent = text;
+      sayLogEl.appendChild(line);
+      if (shouldScroll) {
+        sayLogEl.scrollTop = sayLogEl.scrollHeight;
       }
     }
 
@@ -320,11 +378,7 @@
       chatWs.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
         if (data.type === 'ping') return;
-        const log = document.getElementById('chatlog');
-        const line = document.createElement('div');
-        line.textContent = `${data.author}: ${data.message}`;
-        log.appendChild(line);
-        log.scrollTop = log.scrollHeight;
+        appendChatLine(`${data.author}: ${data.message}`);
       };
     }
 
@@ -344,7 +398,7 @@
         if (!res.ok || res.status === 204) return;
         const data = await res.json();
         if (data && data.text) {
-          document.getElementById('flavor').textContent = data.text;
+          appendChatLine(`[SYSTEM] ${data.text}`);
         }
       } catch (err) {
         // Silent fail
@@ -353,8 +407,6 @@
 
     loadShards();
     connectChat();
-    refreshFlavor();
-    setInterval(refreshFlavor, 25000);
   </script>
 </body>
 </html>

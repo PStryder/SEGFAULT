@@ -18,6 +18,12 @@ body {
   padding: 20px;
 }
 
+body.spectator {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 body.tick-flash::after {
   content: "";
   position: fixed;
@@ -92,6 +98,8 @@ body.tick-flash::after {
   display: grid;
   grid-template-columns: minmax(220px, 320px) 1fr;
   gap: 12px;
+  flex: 1;
+  align-content: start;
 }
 
 .spectator-row {
@@ -100,6 +108,7 @@ body.tick-flash::after {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: stretch;
+  min-height: 60vh;
 }
 
 .spectator-row .panel {
@@ -257,6 +266,17 @@ button.active {
   border: 1px solid #333;
 }
 
+.trace-log {
+  max-height: 220px;
+  overflow-y: auto;
+  background: #000;
+  padding: 8px;
+  border: 1px solid #333;
+  white-space: pre-wrap;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
 .chat-row {
   display: flex;
   gap: 8px;
@@ -266,6 +286,22 @@ button.active {
 
 .chat-panel .chat-row {
   margin-top: auto;
+}
+
+.chat-input-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.chat-input-bar input {
+  flex: 1;
+  min-width: 240px;
+  background: #000;
+  color: #e2e2e2;
+  border: 1px solid #333;
+  padding: 8px;
 }
 
 .chat-row input {

@@ -79,6 +79,7 @@ class ShardState:
     processes: dict[str, ProcessState]
     defragger: DefragmenterState
     broadcasts: list[Broadcast] = field(default_factory=list)
+    last_broadcasts: list[Broadcast] = field(default_factory=list)
     say_events: list[SayEvent] = field(default_factory=list)
     echo_tiles: list[EchoTile] = field(default_factory=list)
     noise_burst_remaining: int = 0

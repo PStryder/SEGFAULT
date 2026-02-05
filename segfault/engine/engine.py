@@ -190,6 +190,7 @@ class TickEngine:
         broadcasts_snapshot = list(shard.broadcasts)
         # Clear broadcasts for this tick window
         shard.broadcasts.clear()
+        shard.last_broadcasts = broadcasts_snapshot
         shard.watchdog.restored_this_tick = False
         self._record_tick_snapshot(shard, broadcasts_snapshot)
         # Shard shutdown invariant
@@ -242,12 +243,12 @@ class TickEngine:
         if target_pos:
             path = self._bfs_path(shard, shard.defragger.pos, target_pos)
             preview = path[1:]
-        return {
-            "tick": shard.tick,
-            "grid": render_spectator_grid(shard),
-            "defragger": shard.defragger.pos,
-            "defragger_target": {"id": target_id, "pos": target_pos} if target_pos else None,
-            "defragger_preview": preview,
+          return {
+              "tick": shard.tick,
+              "grid": render_spectator_grid(shard),
+              "defragger": shard.defragger.pos,
+              "defragger_target": {"id": target_id, "pos": target_pos} if target_pos else None,
+              "defragger_preview": preview,
             "walls": [
                 {"a": list(edge.a), "b": list(edge.b)}
                 for edge in sorted(shard.walls_set, key=lambda e: (e.a, e.b))
@@ -260,16 +261,24 @@ class TickEngine:
                 }
                 for p in shard.processes.values()
             ],
-            "watchdog": {
-                "quiet_ticks": shard.watchdog.quiet_ticks,
-                "countdown": shard.watchdog.countdown,
-                "active": shard.watchdog.active,
-                "bonus_step": shard.watchdog.bonus_step,
-            },
-            "say_events": [
-                {
-                    "sender_id": ev.sender_id,
-                    "sender_pos": ev.sender_pos,
+              "watchdog": {
+                  "quiet_ticks": shard.watchdog.quiet_ticks,
+                  "countdown": shard.watchdog.countdown,
+                  "active": shard.watchdog.active,
+                  "bonus_step": shard.watchdog.bonus_step,
+              },
+              "broadcasts": [
+                  {
+                      "process_id": b.process_id,
+                      "message": b.message,
+                      "timestamp_ms": b.timestamp_ms,
+                  }
+                  for b in shard.last_broadcasts
+              ],
+              "say_events": [
+                  {
+                      "sender_id": ev.sender_id,
+                      "sender_pos": ev.sender_pos,
                     "message": ev.message,
                     "timestamp_ms": ev.timestamp_ms,
                     "tick": ev.tick,

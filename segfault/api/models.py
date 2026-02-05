@@ -36,6 +36,7 @@ class SpectatorShardState(BaseModel):
     processes: list[dict]
     watchdog: dict
     say_events: list[dict] = Field(default_factory=list)
+    broadcasts: list[dict] = Field(default_factory=list)
     echo_tiles: list[dict] = Field(default_factory=list)
 
 
