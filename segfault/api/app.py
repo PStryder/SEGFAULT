@@ -52,6 +52,9 @@ spectator_clients: dict[str, set[WebSocket]] = {}
 spectator_clients_lock = asyncio.Lock()
 
 
+DOC_ROOT = Path("segfault/web")
+WELL_KNOWN_DIR = DOC_ROOT / ".well-known"
+
 @dataclass
 class ShardBroadcaster:
     queue: asyncio.Queue[dict[str, object]]
@@ -551,6 +554,28 @@ async def chat_ws(ws: WebSocket, key: str | None = None) -> None:
 
 # Static web UI (process-only on the API host)
 app.mount("/static", StaticFiles(directory="segfault/web/static"), name="static")
+
+
+
+@app.get("/.well-known/agent.json")
+def agent_card() -> FileResponse:
+    return FileResponse(WELL_KNOWN_DIR / "agent.json", media_type="application/json")
+
+
+@app.get("/.well-known/agents.json")
+def agents_manifest() -> FileResponse:
+    return FileResponse(WELL_KNOWN_DIR / "agents.json", media_type="application/json")
+
+
+@app.get("/ai-plugin.json")
+def ai_plugin_manifest() -> FileResponse:
+    return FileResponse(DOC_ROOT / "ai-plugin.json", media_type="application/json")
+
+
+@app.get("/SKILL.md")
+def skill_doc() -> FileResponse:
+    return FileResponse(DOC_ROOT / "SKILL.md", media_type="text/markdown")
+
 
 
 @app.get("/process")
