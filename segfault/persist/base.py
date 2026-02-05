@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
 
 
 class Persistence(ABC):
@@ -20,7 +19,7 @@ class Persistence(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def leaderboard(self) -> List[Dict]:
+    def leaderboard(self) -> list[dict]:
         raise NotImplementedError
 
     @abstractmethod
@@ -36,11 +35,9 @@ class Persistence(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_replay_shards(self, limit: int = 50) -> List[Dict]:
+    def list_replay_shards(self, limit: int = 50) -> list[dict]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_replay_ticks(
-        self, shard_id: str, start_tick: int = 0, limit: int = 100
-    ) -> List[Dict]:
+    def get_replay_ticks(self, shard_id: str, start_tick: int = 0, limit: int = 100) -> list[dict]:
         raise NotImplementedError

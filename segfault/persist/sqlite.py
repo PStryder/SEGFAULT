@@ -7,8 +7,8 @@ import random
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
 
 from segfault.persist.base import Persistence
 
@@ -22,8 +22,7 @@ class SqlitePersistence(Persistence):
         self._local = threading.local()
         self._init_db()
         self._write_queue: queue.Queue[
-            tuple[Callable[[sqlite3.Connection], object], threading.Event, Dict[str, object]]
-            | None
+            tuple[Callable[[sqlite3.Connection], object], threading.Event, dict[str, object]] | None
         ] = queue.Queue()
         self._writer_stop = threading.Event()
         self._writer_thread = threading.Thread(
@@ -56,7 +55,7 @@ class SqlitePersistence(Persistence):
         if self._writer_stop.is_set():
             raise RuntimeError("Persistence writer stopped")
         event = threading.Event()
-        holder: Dict[str, object] = {"result": None, "error": None}
+        holder: dict[str, object] = {"result": None, "error": None}
         self._write_queue.put((fn, event, holder))
         if not wait:
             return None
@@ -172,7 +171,7 @@ class SqlitePersistence(Persistence):
 
         self._run_write(_task, wait=False)
 
-    def leaderboard(self) -> List[Dict]:
+    def leaderboard(self) -> list[dict]:
         conn = self._get_conn()
         rows = conn.execute(
             "SELECT call_sign, survivals, deaths, ghosts FROM leaderboard ORDER BY survivals DESC, deaths ASC"
@@ -198,6 +197,7 @@ class SqlitePersistence(Persistence):
             return 0
         now = int(time.time())
         rows = [(channel, text, now) for channel, text in entries]
+
         def _task(conn: sqlite3.Connection) -> int:
             before = conn.execute("SELECT COUNT(*) FROM flavor_text").fetchone()
             before_count = int(before[0]) if before else 0
@@ -212,7 +212,7 @@ class SqlitePersistence(Persistence):
         inserted = self._run_write(_task, wait=True)
         return int(inserted) if inserted is not None else 0
 
-    def random_flavor(self, channel: str | None = None) -> Dict[str, str] | None:
+    def random_flavor(self, channel: str | None = None) -> dict[str, str] | None:
         conn = self._get_conn()
         row = self._random_flavor_row(conn, channel)
         if not row:
@@ -221,7 +221,7 @@ class SqlitePersistence(Persistence):
 
     def _random_flavor_row(
         self, conn: sqlite3.Connection, channel: str | None
-    ) -> Tuple[str, str] | None:
+    ) -> tuple[str, str] | None:
         if channel:
             min_max = conn.execute(
                 "SELECT MIN(id), MAX(id) FROM flavor_text WHERE channel = ?",
@@ -255,11 +255,11 @@ class SqlitePersistence(Persistence):
                 ).fetchone()
         return row
 
-    def _parse_flavor_markdown(self, md_path: str) -> List[Tuple[str, str]]:
+    def _parse_flavor_markdown(self, md_path: str) -> list[tuple[str, str]]:
         path = Path(md_path)
         if not path.exists():
             return []
-        lines: List[Tuple[str, str]] = []
+        lines: list[tuple[str, str]] = []
         for raw in path.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if not line or line.startswith("#"):
@@ -329,7 +329,7 @@ class SqlitePersistence(Persistence):
 
         self._run_write(_task, wait=False)
 
-    def list_replay_shards(self, limit: int = 50) -> List[Dict]:
+    def list_replay_shards(self, limit: int = 50) -> list[dict]:
         conn = self._get_conn()
         rows = conn.execute(
             "SELECT shard_id, started_at, ended_at, total_ticks, total_processes, "
@@ -351,16 +351,14 @@ class SqlitePersistence(Persistence):
             for row in rows
         ]
 
-    def get_replay_ticks(
-        self, shard_id: str, start_tick: int = 0, limit: int = 100
-    ) -> List[Dict]:
+    def get_replay_ticks(self, shard_id: str, start_tick: int = 0, limit: int = 100) -> list[dict]:
         conn = self._get_conn()
         rows = conn.execute(
             "SELECT tick, snapshot FROM replay_ticks WHERE shard_id = ? AND tick >= ? "
             "ORDER BY tick ASC LIMIT ?",
             (shard_id, start_tick, limit),
         ).fetchall()
-        result: List[Dict] = []
+        result: list[dict] = []
         for tick, snapshot in rows:
             result.append({"tick": tick, "snapshot": json.loads(snapshot)})
         return result

@@ -5,7 +5,6 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,26 +45,26 @@ chat_clients: set[WebSocket] = set()
 chat_clients_lock = asyncio.Lock()
 
 # Spectator WS connections by shard id
-spectator_clients: Dict[str, set[WebSocket]] = {}
+spectator_clients: dict[str, set[WebSocket]] = {}
 spectator_clients_lock = asyncio.Lock()
 
 
 @dataclass
 class ShardBroadcaster:
-    queue: asyncio.Queue[Dict[str, object]]
+    queue: asyncio.Queue[dict[str, object]]
     task: asyncio.Task
 
 
-spectator_broadcasters: Dict[str, ShardBroadcaster] = {}
+spectator_broadcasters: dict[str, ShardBroadcaster] = {}
 
 # Leaderboard cache (delayed/batched updates)
-leaderboard_cache: Dict[str, object] = {"data": [], "timestamp": 0}
+leaderboard_cache: dict[str, object] = {"data": [], "timestamp": 0}
 leaderboard_lock = asyncio.Lock()
 engine_lock = asyncio.Lock()
 rate_limit_lock = asyncio.Lock()
-cmd_rate: Dict[str, Tuple[int, float]] = {}
+cmd_rate: dict[str, tuple[int, float]] = {}
 join_rate_lock = asyncio.Lock()
-join_rate: Dict[str, Tuple[int, float]] = {}
+join_rate: dict[str, tuple[int, float]] = {}
 
 
 def _get_engine() -> TickEngine:
@@ -170,8 +169,7 @@ async def tick_loop() -> None:
         async with engine_lock:
             game_engine.tick_once()
             shard_states = {
-                shard_id: game_engine.render_spectator_view(shard_id)
-                for shard_id in shard_ids
+                shard_id: game_engine.render_spectator_view(shard_id) for shard_id in shard_ids
             }
         for shard_id, queue in shard_queues.items():
             state = shard_states.get(shard_id)
@@ -181,7 +179,7 @@ async def tick_loop() -> None:
         await asyncio.sleep(settings.tick_seconds)
 
 
-def _queue_latest(queue: asyncio.Queue[Dict[str, object]], state: Dict[str, object]) -> None:
+def _queue_latest(queue: asyncio.Queue[dict[str, object]], state: dict[str, object]) -> None:
     try:
         queue.put_nowait(state)
     except asyncio.QueueFull:
@@ -195,7 +193,7 @@ def _queue_latest(queue: asyncio.Queue[Dict[str, object]], state: Dict[str, obje
             pass
 
 
-async def _send_spectator_state(ws: WebSocket, state: Dict[str, object]) -> bool:
+async def _send_spectator_state(ws: WebSocket, state: dict[str, object]) -> bool:
     try:
         await asyncio.wait_for(ws.send_json(state), timeout=SPECTATOR_SEND_TIMEOUT)
         return True
@@ -213,7 +211,7 @@ async def _ws_keepalive(ws: WebSocket, interval: float = 30.0) -> None:
             break
 
 
-async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[Dict[str, object]]) -> None:
+async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[dict[str, object]]) -> None:
     while True:
         try:
             state = await queue.get()
@@ -227,7 +225,7 @@ async def _broadcast_shard(shard_id: str, queue: asyncio.Queue[Dict[str, object]
             *(_send_spectator_state(ws, state) for ws in clients),
             return_exceptions=True,
         )
-        stale = [ws for ws, ok in zip(clients, results) if ok is not True]
+        stale = [ws for ws, ok in zip(clients, results, strict=False) if ok is not True]
         if stale:
             async with spectator_clients_lock:
                 live_clients = spectator_clients.get(shard_id)
@@ -282,7 +280,7 @@ async def process_cmd(
     token: str | None = None,
     authorization: str | None = Header(default=None),
     x_api_key: str | None = Header(default=None),
-) -> Dict[str, str]:
+) -> dict[str, str]:
     _check_api_key(x_api_key)
     resolved = _extract_token(token, authorization)
     if not resolved:
@@ -308,14 +306,14 @@ def command_request_to_command(req: CommandRequest):
 
 
 @app.get("/process/info")
-async def process_info() -> Dict[str, object]:
+async def process_info() -> dict[str, object]:
     return PUBLIC_DOCS
 
 
 @app.get("/flavor/random")
 async def flavor_random(
     channel: str | None = None, x_api_key: str | None = Header(default=None)
-) -> Response | Dict[str, str]:
+) -> Response | dict[str, str]:
     _check_api_key(x_api_key)
     store = _get_persistence()
     if channel:
@@ -333,7 +331,7 @@ async def flavor_random(
 
 
 @app.get("/spectate/shards")
-async def list_shards(x_api_key: str | None = Header(default=None)) -> List[Dict]:
+async def list_shards(x_api_key: str | None = Header(default=None)) -> list[dict]:
     _check_api_key(x_api_key)
     game_engine = _get_engine()
     async with engine_lock:
@@ -360,7 +358,7 @@ async def spectate_shard(
 
 
 @app.get("/leaderboard")
-async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response | Dict[str, object]:
+async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response | dict[str, object]:
     _check_api_key(x_api_key)
     store = _get_persistence()
     async with leaderboard_lock:
@@ -374,10 +372,10 @@ async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response 
     return {"entries": entries}
 
 
-@app.get("/replays", response_model=Dict[str, List[ReplayShardSummary]])
+@app.get("/replays", response_model=dict[str, list[ReplayShardSummary]])
 async def list_replays(
     limit: int = 50, x_api_key: str | None = Header(default=None)
-) -> Dict[str, List[ReplayShardSummary]]:
+) -> dict[str, list[ReplayShardSummary]]:
     _check_api_key(x_api_key)
     store = _get_persistence()
     capped = max(1, min(limit, 200))
@@ -409,7 +407,7 @@ async def spectate_ws(ws: WebSocket, shard_id: str, key: str | None = None) -> N
     async with spectator_clients_lock:
         spectator_clients.setdefault(shard_id, set()).add(ws)
         if shard_id not in spectator_broadcasters:
-            queue: asyncio.Queue[Dict[str, object]] = asyncio.Queue(maxsize=1)
+            queue: asyncio.Queue[dict[str, object]] = asyncio.Queue(maxsize=1)
             task = asyncio.create_task(_broadcast_shard(shard_id, queue))
             spectator_broadcasters[shard_id] = ShardBroadcaster(queue=queue, task=task)
     try:
@@ -457,7 +455,7 @@ async def chat_ws(ws: WebSocket, key: str | None = None) -> None:
             }
             async with chat_clients_lock:
                 clients = list(chat_clients)
-            stale: List[WebSocket] = []
+            stale: list[WebSocket] = []
             for client in clients:
                 try:
                     await client.send_json(payload)

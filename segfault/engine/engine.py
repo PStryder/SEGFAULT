@@ -5,7 +5,6 @@ import time
 import uuid
 from collections import deque
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 from segfault.common.constants import (
     FIBONACCI_ESCALATION,
@@ -17,6 +16,7 @@ from segfault.common.constants import (
 from segfault.common.types import Broadcast, Command, CommandType, GateType, Tile
 from segfault.engine.drift import drift_gates, drift_walls
 from segfault.engine.geometry import (
+    WallEdge,
     adjacent_tiles,
     diagonal_legal,
     edge_slots,
@@ -24,7 +24,6 @@ from segfault.engine.geometry import (
     los_clear,
     neighbors_8,
     wall_blocks,
-    WallEdge,
 )
 from segfault.engine.state import (
     DefragmenterState,
@@ -85,10 +84,10 @@ class TickEngine:
         self.empty_shard_ticks = empty_shard_ticks
         self.max_total_processes = max_total_processes
         self.enable_replay_logging = enable_replay_logging
-        self.shards: Dict[str, ShardState] = {}
-        self.process_to_shard: Dict[str, str] = {}
-        self.session_tokens: Dict[str, Tuple[str, int]] = {}
-        self.process_events: Dict[str, List[Event]] = {}
+        self.shards: dict[str, ShardState] = {}
+        self.process_to_shard: dict[str, str] = {}
+        self.session_tokens: dict[str, tuple[str, int]] = {}
+        self.process_events: dict[str, list[Event]] = {}
 
     def create_shard(self) -> ShardState:
         """Create and register a new shard with walls, gates, and a defragmenter."""
@@ -108,7 +107,7 @@ class TickEngine:
             self.persistence.register_replay_shard(shard_id)
         return shard
 
-    def join_process(self) -> Tuple[str, str] | None:
+    def join_process(self) -> tuple[str, str] | None:
         """Spawn a new process in a shard and return its session token and process id."""
         if self.max_total_processes is not None:
             if self._total_processes() >= self.max_total_processes:
@@ -214,7 +213,7 @@ class TickEngine:
                 )
             self.shards.pop(shard.shard_id, None)
 
-    def render_process_view(self, process_id: str) -> Dict:
+    def render_process_view(self, process_id: str) -> dict:
         """Render the process-visible snapshot for a given process id."""
         shard = self._get_shard_for_process(process_id)
         if not shard:
@@ -230,18 +229,16 @@ class TickEngine:
             "events": [e.__dict__ for e in events],
         }
 
-    def render_spectator_view(self, shard_id: str) -> Dict:
+    def render_spectator_view(self, shard_id: str) -> dict:
         """Render the spectator snapshot for a given shard."""
         shard = self.shards.get(shard_id)
         if not shard:
             return {}
         target_id = shard.defragger.target_id
         target_pos = (
-            shard.processes[target_id].pos
-            if target_id and target_id in shard.processes
-            else None
+            shard.processes[target_id].pos if target_id and target_id in shard.processes else None
         )
-        preview: List[Tile] = []
+        preview: list[Tile] = []
         if target_pos:
             path = self._bfs_path(shard, shard.defragger.pos, target_pos)
             preview = path[1:4]
@@ -295,11 +292,11 @@ class TickEngine:
         max_age = ECHO_TTL_TICKS - 1
         if not shard.echo_tiles:
             return
-        shard.echo_tiles = [
-            echo for echo in shard.echo_tiles if shard.tick - echo.tick <= max_age
-        ]
+        shard.echo_tiles = [echo for echo in shard.echo_tiles if shard.tick - echo.tick <= max_age]
 
-    def _record_tick_snapshot(self, shard: ShardState, broadcasts_snapshot: List[Broadcast]) -> None:
+    def _record_tick_snapshot(
+        self, shard: ShardState, broadcasts_snapshot: list[Broadcast]
+    ) -> None:
         if not self.enable_replay_logging:
             return
         snapshot = {
@@ -310,7 +307,9 @@ class TickEngine:
                 [edge.a[0], edge.a[1], edge.b[0], edge.b[1]]
                 for edge in sorted(shard.walls_set, key=lambda e: (e.a, e.b))
             ],
-            "gates": [{"pos": [g.pos[0], g.pos[1]], "type": g.gate_type.value} for g in shard.gates],
+            "gates": [
+                {"pos": [g.pos[0], g.pos[1]], "type": g.gate_type.value} for g in shard.gates
+            ],
             "processes": [
                 {
                     "id": p.process_id,
@@ -349,15 +348,12 @@ class TickEngine:
                     "sender_pos": [ev.sender_pos[0], ev.sender_pos[1]],
                     "message": ev.message,
                     "recipients": [
-                        {"id": r.process_id, "pos": [r.pos[0], r.pos[1]]}
-                        for r in ev.recipients
+                        {"id": r.process_id, "pos": [r.pos[0], r.pos[1]]} for r in ev.recipients
                     ],
                 }
                 for ev in shard.say_events
             ],
-            "echo_tiles": [
-                {"pos": [e.pos[0], e.pos[1]], "tick": e.tick} for e in shard.echo_tiles
-            ],
+            "echo_tiles": [{"pos": [e.pos[0], e.pos[1]], "tick": e.tick} for e in shard.echo_tiles],
             "events": {
                 "kills": list(shard.tick_events.kills),
                 "survivals": list(shard.tick_events.survivals),
@@ -378,14 +374,14 @@ class TickEngine:
     def _total_processes(self) -> int:
         return sum(len(shard.processes) for shard in self.shards.values())
 
-    def _get_shard_for_process(self, process_id: str) -> Optional[ShardState]:
+    def _get_shard_for_process(self, process_id: str) -> ShardState | None:
         shard_id = self.process_to_shard.get(process_id)
         if not shard_id:
             return None
         return self.shards.get(shard_id)
 
-    def _resolve_process_actions(self, shard: ShardState) -> Dict[str, Optional[Tile]]:
-        moves: Dict[str, Optional[Tile]] = {}
+    def _resolve_process_actions(self, shard: ShardState) -> dict[str, Tile | None]:
+        moves: dict[str, Tile | None] = {}
         for pid, proc in shard.processes.items():
             if not proc.alive:
                 moves[pid] = None
@@ -396,12 +392,12 @@ class TickEngine:
             if dest is not None and dest == shard.defragger.pos:
                 moves[pid] = None
         # Resolve same-destination collisions
-        dest_map: Dict[Tile, List[str]] = {}
+        dest_map: dict[Tile, list[str]] = {}
         for pid, dest in moves.items():
             if dest is None:
                 continue
             dest_map.setdefault(dest, []).append(pid)
-        for dest, pids in dest_map.items():
+        for _dest, pids in dest_map.items():
             if len(pids) > 1:
                 for pid in pids:
                     moves[pid] = None
@@ -418,7 +414,7 @@ class TickEngine:
                     changed = True
         return moves
 
-    def _apply_process_moves(self, shard: ShardState, moves: Dict[str, Optional[Tile]]) -> None:
+    def _apply_process_moves(self, shard: ShardState, moves: dict[str, Tile | None]) -> None:
         for pid, dest in moves.items():
             proc = shard.processes.get(pid)
             if not proc or not proc.alive:
@@ -431,7 +427,7 @@ class TickEngine:
                 proc.los_lock = False
                 proc.last_sprint_tick = shard.tick
 
-    def _intent_to_destination(self, shard: ShardState, proc: ProcessState) -> Optional[Tile]:
+    def _intent_to_destination(self, shard: ShardState, proc: ProcessState) -> Tile | None:
         cmd = proc.buffered
         if cmd.cmd in (CommandType.IDLE, CommandType.BROADCAST, CommandType.SAY):
             return None
@@ -518,7 +514,7 @@ class TickEngine:
                 self._kill_process(shard, victim)
                 break
 
-    def _select_defragger_target(self, shard: ShardState) -> Tuple[Optional[str], int]:
+    def _select_defragger_target(self, shard: ShardState) -> tuple[str | None, int]:
         # Broadcast targeting (anti-deadlock)
         target_id = None
         bonus = 0
@@ -563,7 +559,7 @@ class TickEngine:
         idx = min(count - 1, len(FIBONACCI_ESCALATION) - 1)
         return FIBONACCI_ESCALATION[idx]
 
-    def _defragger_next_step(self, shard: ShardState) -> Optional[Tile]:
+    def _defragger_next_step(self, shard: ShardState) -> Tile | None:
         # If no target, patrol randomly
         target_id = shard.defragger.target_id
         if not target_id or target_id not in shard.processes:
@@ -588,9 +584,9 @@ class TickEngine:
         best = [n for n in neighbors if distances[n] == min_dist]
         return sorted(best)[0]
 
-    def _bfs_path(self, shard: ShardState, start: Tile, goal: Tile) -> List[Tile]:
+    def _bfs_path(self, shard: ShardState, start: Tile, goal: Tile) -> list[Tile]:
         queue = deque([start])
-        came_from: Dict[Tile, Optional[Tile]] = {start: None}
+        came_from: dict[Tile, Tile | None] = {start: None}
         while queue:
             cur = queue.popleft()
             if cur == goal:
@@ -608,8 +604,8 @@ class TickEngine:
         path.reverse()
         return path
 
-    def _distance_map(self, shard: ShardState, goal: Tile) -> Dict[Tile, int]:
-        distances: Dict[Tile, int] = {goal: 0}
+    def _distance_map(self, shard: ShardState, goal: Tile) -> dict[Tile, int]:
+        distances: dict[Tile, int] = {goal: 0}
         queue = deque([goal])
         while queue:
             cur = queue.popleft()
@@ -619,13 +615,13 @@ class TickEngine:
                     queue.append(n)
         return distances
 
-    def _weighted_choice(self, candidates: List[Tile], weights: List[float]) -> Tile:
+    def _weighted_choice(self, candidates: list[Tile], weights: list[float]) -> Tile:
         total = sum(weights)
         if total <= 0:
             return self.rng.choice(candidates)
         r = self.rng.random() * total
         upto = 0.0
-        for candidate, weight in zip(candidates, weights):
+        for candidate, weight in zip(candidates, weights, strict=False):
             upto += weight
             if upto >= r:
                 return candidate
@@ -739,7 +735,7 @@ class TickEngine:
             if pid == old_id:
                 self.session_tokens[token] = (new_proc.process_id, issued_at)
 
-    def _process_at(self, shard: ShardState, tile: Tile) -> Optional[ProcessState]:
+    def _process_at(self, shard: ShardState, tile: Tile) -> ProcessState | None:
         for proc in shard.processes.values():
             if proc.pos == tile and proc.alive:
                 return proc
@@ -765,7 +761,7 @@ class TickEngine:
             attempts += 1
         raise RuntimeError("No empty tile found after max attempts")
 
-    def _generate_walls(self) -> Dict[int, WallEdge]:
+    def _generate_walls(self) -> dict[int, WallEdge]:
         """Generate a wall set that preserves connectivity and avoids dead cells."""
         edges = edge_slots()
         target = 80
@@ -784,9 +780,9 @@ class TickEngine:
                     return {i: e for i, e in enumerate(selected)}
         raise RuntimeError("Failed to generate a valid wall layout")
 
-    def _generate_gates(self, walls: Dict[int, WallEdge]) -> List[Gate]:
+    def _generate_gates(self, walls: dict[int, WallEdge]) -> list[Gate]:
         """Generate a stable gate and a random number of ghost gates."""
-        gates: List[Gate] = []
+        gates: list[Gate] = []
         stable = Gate(gate_type=GateType.STABLE, pos=self._random_empty_tile(set(), set()))
         gates.append(stable)
         ghost_count = self.rng.randint(1, 3)
@@ -872,9 +868,9 @@ def render_process_grid(shard: ShardState, proc: ProcessState) -> str:
     min_y = min(t[1] for t in visible_tiles)
     max_y = max(t[1] for t in visible_tiles)
 
-    rows: List[str] = []
+    rows: list[str] = []
     for y in range(min_y, max_y + 1):
-        row_parts: List[str] = []
+        row_parts: list[str] = []
         for x in range(min_x, max_x + 1):
             tile = (x, y)
             if tile not in visible_tiles:
@@ -889,7 +885,7 @@ def render_process_grid(shard: ShardState, proc: ProcessState) -> str:
     return "\n".join(rows)
 
 
-def _digit_for_tile(center: Tile, tile: Tile) -> Optional[str]:
+def _digit_for_tile(center: Tile, tile: Tile) -> str | None:
     dx = tile[0] - center[0]
     dy = tile[1] - center[1]
     if abs(dx) > 1 or abs(dy) > 1:
@@ -921,7 +917,7 @@ def _tile_label(shard: ShardState, proc: ProcessState, tile: Tile) -> str:
     return ""
 
 
-def render_spectator_grid(shard: ShardState) -> List[List[str]]:
+def render_spectator_grid(shard: ShardState) -> list[list[str]]:
     grid = [["." for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     for gate in shard.gates:
         x, y = gate.pos
@@ -938,8 +934,7 @@ def render_spectator_grid(shard: ShardState) -> List[List[str]]:
     return grid
 
 
-def _adjacent_cluster(shard: ShardState, process_id: str) -> List[str]:
-    start = shard.processes[process_id]
+def _adjacent_cluster(shard: ShardState, process_id: str) -> list[str]:
     cluster = set([process_id])
     changed = True
     while changed:

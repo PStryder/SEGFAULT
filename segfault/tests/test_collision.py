@@ -1,6 +1,6 @@
-from segfault.common.types import Command, CommandType, GateType
+from segfault.common.types import Command, CommandType
 from segfault.engine.engine import TickEngine
-from segfault.engine.state import DefragmenterState, Gate, ProcessState, ShardState
+from segfault.engine.state import DefragmenterState, ProcessState
 from segfault.persist.base import Persistence
 
 

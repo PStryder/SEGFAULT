@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from segfault.common.types import Broadcast, Command, CommandType, GateType, Tile
 from segfault.engine.geometry import WallEdge
@@ -35,7 +34,7 @@ class SayEvent:
     sender_id: str
     sender_pos: Tile
     message: str
-    recipients: List[SayRecipient]
+    recipients: list[SayRecipient]
     timestamp_ms: int
     tick: int
 
@@ -49,8 +48,8 @@ class EchoTile:
 @dataclass
 class DefragmenterState:
     pos: Tile
-    target_id: Optional[str] = None
-    target_reason: Optional[str] = None  # broadcast | los | patrol
+    target_id: str | None = None
+    target_reason: str | None = None  # broadcast | los | patrol
 
 
 @dataclass
@@ -64,25 +63,25 @@ class WatchdogState:
 
 @dataclass
 class TickEvents:
-    kills: List[str] = field(default_factory=list)
-    survivals: List[str] = field(default_factory=list)
-    ghosts: List[str] = field(default_factory=list)
-    spawns: List[str] = field(default_factory=list)
+    kills: list[str] = field(default_factory=list)
+    survivals: list[str] = field(default_factory=list)
+    ghosts: list[str] = field(default_factory=list)
+    spawns: list[str] = field(default_factory=list)
 
 
 @dataclass
 class ShardState:
     shard_id: str
-    walls: Dict[int, WallEdge]
-    gates: List[Gate]
-    processes: Dict[str, ProcessState]
+    walls: dict[int, WallEdge]
+    gates: list[Gate]
+    processes: dict[str, ProcessState]
     defragger: DefragmenterState
-    broadcasts: List[Broadcast] = field(default_factory=list)
-    say_events: List[SayEvent] = field(default_factory=list)
-    echo_tiles: List[EchoTile] = field(default_factory=list)
+    broadcasts: list[Broadcast] = field(default_factory=list)
+    say_events: list[SayEvent] = field(default_factory=list)
+    echo_tiles: list[EchoTile] = field(default_factory=list)
     noise_burst_remaining: int = 0
     tick_events: TickEvents = field(default_factory=TickEvents)
-    pending_spawns: List[str] = field(default_factory=list)
+    pending_spawns: list[str] = field(default_factory=list)
     total_processes: int = 0
     total_kills: int = 0
     total_survivals: int = 0

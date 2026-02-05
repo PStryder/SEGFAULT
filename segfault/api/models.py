@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
 from pydantic import BaseModel, Field
 
 
@@ -12,13 +10,13 @@ class JoinResponse(BaseModel):
 
 class CommandRequest(BaseModel):
     cmd: str
-    arg: Optional[str] = None
+    arg: str | None = None
 
 
 class ProcessStateResponse(BaseModel):
     tick: int
     grid: str
-    events: List[dict]
+    events: list[dict]
 
 
 class SpectatorShardSummary(BaseModel):
@@ -29,16 +27,16 @@ class SpectatorShardSummary(BaseModel):
 
 class SpectatorShardState(BaseModel):
     tick: int
-    grid: List[List[str]]
-    defragger: Tuple[int, int]
-    defragger_target: Optional[dict] = None
-    defragger_preview: List[Tuple[int, int]] = Field(default_factory=list)
-    walls: List[dict] = Field(default_factory=list)
-    gates: List[dict]
-    processes: List[dict]
+    grid: list[list[str]]
+    defragger: tuple[int, int]
+    defragger_target: dict | None = None
+    defragger_preview: list[tuple[int, int]] = Field(default_factory=list)
+    walls: list[dict] = Field(default_factory=list)
+    gates: list[dict]
+    processes: list[dict]
     watchdog: dict
-    say_events: List[dict] = Field(default_factory=list)
-    echo_tiles: List[dict] = Field(default_factory=list)
+    say_events: list[dict] = Field(default_factory=list)
+    echo_tiles: list[dict] = Field(default_factory=list)
 
 
 class ChatMessage(BaseModel):
@@ -65,5 +63,5 @@ class ReplayTickEntry(BaseModel):
 
 class ReplayResponse(BaseModel):
     shard_id: str
-    ticks: List[ReplayTickEntry]
+    ticks: list[ReplayTickEntry]
     has_more: bool

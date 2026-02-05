@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Iterator, List, Set, Tuple
 
 from segfault.common.constants import GRID_SIZE
 from segfault.common.types import Edge, Point, Tile
@@ -19,7 +18,7 @@ class WallEdge:
     a: Tile
     b: Tile
 
-    def canonical(self) -> "WallEdge":
+    def canonical(self) -> WallEdge:
         return WallEdge(*sorted([self.a, self.b]))  # type: ignore[arg-type]
 
     def segment(self) -> Edge:
@@ -36,12 +35,12 @@ def tile_center(tile: Tile) -> Point:
     return (x + 0.5, y + 0.5)
 
 
-def orthogonal_neighbors(tile: Tile) -> List[Tile]:
+def orthogonal_neighbors(tile: Tile) -> list[Tile]:
     x, y = tile
     return [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
 
 
-def neighbors_8(tile: Tile) -> List[Tile]:
+def neighbors_8(tile: Tile) -> list[Tile]:
     x, y = tile
     return [
         (x + 1, y),
@@ -78,7 +77,7 @@ def edge_segment_for_tiles(a: Tile, b: Tile) -> Edge:
     return ((ax, y), (ax + 1, y))
 
 
-def wall_blocks(a: Tile, b: Tile, walls: Set[WallEdge]) -> bool:
+def wall_blocks(a: Tile, b: Tile, walls: set[WallEdge]) -> bool:
     if abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1:
         return False
     edge = WallEdge(a, b).canonical()
@@ -158,7 +157,7 @@ def on_segment(a: Point, b: Point, c: Point) -> bool:
     return False
 
 
-def diagonal_legal(a: Tile, b: Tile, walls: Set[WallEdge]) -> bool:
+def diagonal_legal(a: Tile, b: Tile, walls: set[WallEdge]) -> bool:
     """Diagonal move/LOS is legal if center-to-center segment does not intersect a wall edge."""
     seg = (tile_center(a), tile_center(b))
     for wall in walls:
@@ -167,9 +166,9 @@ def diagonal_legal(a: Tile, b: Tile, walls: Set[WallEdge]) -> bool:
     return True
 
 
-def adjacent_tiles(tile: Tile, walls: Set[WallEdge]) -> List[Tile]:
+def adjacent_tiles(tile: Tile, walls: set[WallEdge]) -> list[Tile]:
     """Return passable neighbors (orthogonal and diagonal) based on wall geometry."""
-    neighbors: List[Tile] = []
+    neighbors: list[Tile] = []
     for n in neighbors_8(tile):
         if not in_bounds(n):
             continue
@@ -184,7 +183,7 @@ def adjacent_tiles(tile: Tile, walls: Set[WallEdge]) -> List[Tile]:
     return neighbors
 
 
-def los_clear(a: Tile, b: Tile, walls: Set[WallEdge]) -> bool:
+def los_clear(a: Tile, b: Tile, walls: set[WallEdge]) -> bool:
     dx = b[0] - a[0]
     dy = b[1] - a[1]
     if dx == 0 or dy == 0 or abs(dx) == abs(dy):
@@ -196,12 +195,12 @@ def los_clear(a: Tile, b: Tile, walls: Set[WallEdge]) -> bool:
     return False
 
 
-def all_tiles() -> List[Tile]:
+def all_tiles() -> list[Tile]:
     return [(x, y) for x in range(GRID_SIZE) for y in range(GRID_SIZE)]
 
 
-def reachable_component(start: Tile, walls: Set[WallEdge]) -> Set[Tile]:
-    visited: Set[Tile] = set()
+def reachable_component(start: Tile, walls: set[WallEdge]) -> set[Tile]:
+    visited: set[Tile] = set()
     stack = [start]
     while stack:
         cur = stack.pop()
@@ -214,7 +213,7 @@ def reachable_component(start: Tile, walls: Set[WallEdge]) -> Set[Tile]:
     return visited
 
 
-def is_fully_connected(walls: Set[WallEdge]) -> bool:
+def is_fully_connected(walls: set[WallEdge]) -> bool:
     tiles = all_tiles()
     if not tiles:
         return True
@@ -222,13 +221,13 @@ def is_fully_connected(walls: Set[WallEdge]) -> bool:
     return len(comp) == len(tiles)
 
 
-def exit_count(tile: Tile, walls: Set[WallEdge]) -> int:
+def exit_count(tile: Tile, walls: set[WallEdge]) -> int:
     return len(adjacent_tiles(tile, walls))
 
 
-def edge_slots() -> List[WallEdge]:
+def edge_slots() -> list[WallEdge]:
     """All possible interior wall edges between tiles."""
-    edges: List[WallEdge] = []
+    edges: list[WallEdge] = []
     for x in range(GRID_SIZE):
         for y in range(GRID_SIZE):
             if x + 1 < GRID_SIZE:
@@ -239,11 +238,11 @@ def edge_slots() -> List[WallEdge]:
     return list({e for e in edges})
 
 
-def adjacent_edge_slots(edge: WallEdge) -> List[WallEdge]:
+def adjacent_edge_slots(edge: WallEdge) -> list[WallEdge]:
     """Return adjacent edge slots sharing a vertex with the given edge."""
     (x1, y1), (x2, y2) = edge.segment()
     vertices = {(x1, y1), (x2, y2)}
-    candidates: Set[WallEdge] = set()
+    candidates: set[WallEdge] = set()
     for candidate in edge_slots():
         if candidate == edge.canonical():
             continue

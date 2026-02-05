@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Tuple
 
-Tile = Tuple[int, int]
-Point = Tuple[float, float]
-Edge = Tuple[Point, Point]
+Tile = tuple[int, int]
+Point = tuple[float, float]
+Edge = tuple[Point, Point]
 
 
 class GateType(str, Enum):

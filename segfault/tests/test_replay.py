@@ -1,10 +1,10 @@
 import tempfile
 from pathlib import Path
 
+from segfault.common.types import GateType
 from segfault.engine.engine import TickEngine
 from segfault.engine.state import Gate, ProcessState
 from segfault.persist.sqlite import SqlitePersistence
-from segfault.common.types import GateType
 
 
 def _make_engine(db_path: Path, **kwargs) -> TickEngine:

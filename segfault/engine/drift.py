@@ -1,21 +1,17 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Tuple
 
 from segfault.common.constants import GRID_SIZE
-from segfault.common.types import GateType, Tile
+from segfault.common.types import GateType
 from segfault.engine.geometry import (
     adjacent_edge_slots,
-    adjacent_tiles,
     exit_count,
     in_bounds,
     is_fully_connected,
-    neighbors_8,
     orthogonal_neighbors,
-    WallEdge,
 )
-from segfault.engine.state import Gate, ShardState
+from segfault.engine.state import ShardState
 
 
 def drift_walls(shard: ShardState, rng: random.Random) -> None:

@@ -1,5 +1,3 @@
-import pytest
-
 from segfault.engine.geometry import (
     WallEdge,
     diagonal_legal,
