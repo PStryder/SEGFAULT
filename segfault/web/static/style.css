@@ -90,6 +90,17 @@ body.tick-flash::after {
   gap: 12px;
 }
 
+.spectator-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.spectator-row .panel {
+  margin-bottom: 0;
+}
+
 .column {
   display: flex;
   flex-direction: column;
@@ -294,6 +305,10 @@ button.active {
 @media (max-width: 900px) {
   .process-shell,
   .spectator-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .spectator-row {
     grid-template-columns: 1fr;
   }
 }
