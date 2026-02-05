@@ -21,6 +21,7 @@ class ProcessState:
     buffered: Command = field(default_factory=lambda: Command(CommandType.IDLE))
     alive: bool = True
     los_lock: bool = False
+    last_sprint_tick: int = -999
 
 
 @dataclass
@@ -36,6 +37,12 @@ class SayEvent:
     message: str
     recipients: List[SayRecipient]
     timestamp_ms: int
+    tick: int
+
+
+@dataclass
+class EchoTile:
+    pos: Tile
     tick: int
 
 
@@ -64,6 +71,7 @@ class ShardState:
     defragger: DefragmenterState
     broadcasts: List[Broadcast] = field(default_factory=list)
     say_events: List[SayEvent] = field(default_factory=list)
+    echo_tiles: List[EchoTile] = field(default_factory=list)
     tick: int = 0
     watchdog: WatchdogState = field(default_factory=WatchdogState)
     empty_ticks: int = 0

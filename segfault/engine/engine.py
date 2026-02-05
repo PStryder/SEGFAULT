@@ -28,6 +28,7 @@ from segfault.engine.geometry import (
 )
 from segfault.engine.state import (
     DefragmenterState,
+    EchoTile,
     Gate,
     ProcessState,
     SayEvent,
@@ -52,6 +53,9 @@ DIRECTION_MAP = {
 CHAT_ARTIFACT_PROB = 0.015
 CHAT_ARTIFACTS = ("...", "[STATIC]")
 SAY_EVENT_TTL_TICKS = 3
+ECHO_TTL_TICKS = 4
+SPRINT_COOLDOWN_TICKS = 1
+DEFRAGGER_WANDER_PROB = 0.15
 
 
 @dataclass
@@ -173,6 +177,7 @@ class TickEngine:
         self._advance_watchdog(shard)
         # Trim SAY traces after tick advancement
         self._trim_old_say_events(shard)
+        self._trim_old_echo_tiles(shard)
         # Clear broadcasts for this tick window
         shard.broadcasts.clear()
         shard.watchdog.restored_this_tick = False
@@ -236,6 +241,7 @@ class TickEngine:
                 }
                 for ev in shard.say_events
             ],
+            "echo_tiles": [{"pos": echo.pos, "tick": echo.tick} for echo in shard.echo_tiles],
         }
 
     def _trim_old_say_events(self, shard: ShardState) -> None:
@@ -244,6 +250,15 @@ class TickEngine:
         if not shard.say_events:
             return
         shard.say_events = [ev for ev in shard.say_events if shard.tick - ev.tick <= max_age]
+
+    def _trim_old_echo_tiles(self, shard: ShardState) -> None:
+        """Retain a short rolling window of echo tiles for spectators."""
+        max_age = ECHO_TTL_TICKS - 1
+        if not shard.echo_tiles:
+            return
+        shard.echo_tiles = [
+            echo for echo in shard.echo_tiles if shard.tick - echo.tick <= max_age
+        ]
 
     # Internal helpers
 
@@ -307,6 +322,7 @@ class TickEngine:
             # Sprint breaks LOS lock immediately
             if proc.buffered.cmd == CommandType.BUFFER:
                 proc.los_lock = False
+                proc.last_sprint_tick = shard.tick
 
     def _intent_to_destination(self, shard: ShardState, proc: ProcessState) -> Optional[Tile]:
         cmd = proc.buffered
@@ -330,6 +346,8 @@ class TickEngine:
             return None
         if cmd.cmd == CommandType.MOVE:
             return target
+        if shard.tick - proc.last_sprint_tick <= SPRINT_COOLDOWN_TICKS:
+            return None
         # BUFFER: move up to 3 tiles with randomized turns
         current = proc.pos
         for _ in range(3):
@@ -369,7 +387,7 @@ class TickEngine:
                 self._remove_process(shard, proc)
             else:
                 self.persistence.record_ghost(proc.call_sign)
-                self._transfer_process(proc)
+                self._transfer_process(shard, proc)
 
     def _resolve_defragger(self, shard: ShardState) -> None:
         target_id, bonus_steps = self._select_defragger_target(shard)
@@ -437,11 +455,21 @@ class TickEngine:
                 return None
             return self.rng.choice(neighbors)
         target = shard.processes[target_id]
-        # Simple BFS pathfinding
-        path = self._bfs_path(shard, shard.defragger.pos, target.pos)
-        if len(path) < 2:
+        # Weighted BFS pathfinding with occasional suboptimal steps
+        distances = self._distance_map(shard, target.pos)
+        current = shard.defragger.pos
+        if current not in distances:
             return None
-        return path[1]
+        neighbors = [n for n in adjacent_tiles(current, shard.walls_set) if n in distances]
+        if not neighbors:
+            return None
+        min_dist = min(distances[n] for n in neighbors)
+        if self.rng.random() < DEFRAGGER_WANDER_PROB:
+            candidates = [n for n in neighbors if distances[n] <= min_dist + 1]
+            weights = [1.0 / (1 + distances[n]) for n in candidates]
+            return self._weighted_choice(candidates, weights)
+        best = [n for n in neighbors if distances[n] == min_dist]
+        return sorted(best)[0]
 
     def _bfs_path(self, shard: ShardState, start: Tile, goal: Tile) -> List[Tile]:
         queue = deque([start])
@@ -462,6 +490,29 @@ class TickEngine:
             path.append(came_from[path[-1]])
         path.reverse()
         return path
+
+    def _distance_map(self, shard: ShardState, goal: Tile) -> Dict[Tile, int]:
+        distances: Dict[Tile, int] = {goal: 0}
+        queue = deque([goal])
+        while queue:
+            cur = queue.popleft()
+            for n in adjacent_tiles(cur, shard.walls_set):
+                if n not in distances:
+                    distances[n] = distances[cur] + 1
+                    queue.append(n)
+        return distances
+
+    def _weighted_choice(self, candidates: List[Tile], weights: List[float]) -> Tile:
+        total = sum(weights)
+        if total <= 0:
+            return self.rng.choice(candidates)
+        r = self.rng.random() * total
+        upto = 0.0
+        for candidate, weight in zip(candidates, weights):
+            upto += weight
+            if upto >= r:
+                return candidate
+        return candidates[-1]
 
     def _handle_broadcast(self, shard: ShardState, process_id: str, message: str) -> None:
         ts = int(time.time() * 1000)
@@ -528,16 +579,22 @@ class TickEngine:
         shard.watchdog = self._reset_watchdog_on_liveness(shard, reason="kill")
         self._remove_process(shard, proc)
 
-    def _remove_process(self, shard: ShardState, proc: ProcessState) -> None:
+    def _remove_process(
+        self, shard: ShardState, proc: ProcessState, preserve_tokens: bool = False
+    ) -> None:
         shard.processes.pop(proc.process_id, None)
         self.process_to_shard.pop(proc.process_id, None)
         self.process_events.pop(proc.process_id, None)
-        for token, pid in list(self.session_tokens.items()):
-            if pid[0] == proc.process_id:
-                self.session_tokens.pop(token, None)
+        if not preserve_tokens:
+            for token, pid in list(self.session_tokens.items()):
+                if pid[0] == proc.process_id:
+                    self.session_tokens.pop(token, None)
+        self._record_echo(shard, proc.pos)
 
-    def _transfer_process(self, proc: ProcessState) -> None:
+    def _transfer_process(self, shard: ShardState, proc: ProcessState) -> None:
         # Create new process in a new shard
+        old_id = proc.process_id
+        self._remove_process(shard, proc, preserve_tokens=True)
         new_shard = self._find_or_create_shard()
         new_proc = ProcessState(
             process_id=str(uuid.uuid4()),
@@ -549,6 +606,10 @@ class TickEngine:
         )
         new_shard.processes[new_proc.process_id] = new_proc
         self.process_to_shard[new_proc.process_id] = new_shard.shard_id
+        self.process_events[new_proc.process_id] = []
+        for token, (pid, issued_at) in list(self.session_tokens.items()):
+            if pid == old_id:
+                self.session_tokens[token] = (new_proc.process_id, issued_at)
 
     def _process_at(self, shard: ShardState, tile: Tile) -> Optional[ProcessState]:
         for proc in shard.processes.values():
@@ -628,6 +689,10 @@ class TickEngine:
         event = Event(kind="system", message=message, timestamp_ms=ts)
         for pid in shard.processes:
             self.process_events.setdefault(pid, []).append(event)
+
+    def _record_echo(self, shard: ShardState, pos: Tile) -> None:
+        shard.echo_tiles.append(EchoTile(pos=pos, tick=shard.tick))
+        self._emit_global_event(shard, "[WARN]: SECTOR CORRUPTED.")
 
     def _advance_watchdog(self, shard: ShardState) -> None:
         wd = shard.watchdog
@@ -738,6 +803,10 @@ def render_spectator_grid(shard: ShardState) -> List[List[str]]:
         grid[y][x] = "P"
     dx, dy = shard.defragger.pos
     grid[dy][dx] = "D"
+    for echo in shard.echo_tiles:
+        ex, ey = echo.pos
+        if 0 <= ex < GRID_SIZE and 0 <= ey < GRID_SIZE and grid[ey][ex] == ".":
+            grid[ey][ex] = "E"
     return grid
 
 

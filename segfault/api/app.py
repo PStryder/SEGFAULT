@@ -338,7 +338,7 @@ async def leaderboard(x_api_key: str | None = Header(default=None)) -> Response 
     store = _get_persistence()
     async with leaderboard_lock:
         now = int(time.time())
-        if now - int(leaderboard_cache["timestamp"]) > 30:
+        if now - int(leaderboard_cache["timestamp"]) > settings.leaderboard_cache_seconds:
             leaderboard_cache["data"] = store.leaderboard()
             leaderboard_cache["timestamp"] = now
         entries = leaderboard_cache["data"]
