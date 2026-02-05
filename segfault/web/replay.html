@@ -17,12 +17,15 @@
       overflow: hidden;
     }
     body.replay .shard-index {
+      height: 100%;
       min-height: 0;
-      max-height: 100%;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     body.replay .shard-list {
-      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+      overflow-y: scroll;
     }
     body.replay .spectator-main {
       display: flex;
