@@ -85,10 +85,6 @@
   <section class="process-shell">
     <div class="column">
       <div class="panel">
-        <div class="label">Flavor</div>
-        <div id="flavor"></div>
-      </div>
-      <div class="panel">
         <div class="label" id="docs-title">SYSTEM NOTICE</div>
         <pre id="docs"></pre>
       </div>
@@ -149,7 +145,6 @@
     const eventsEl = document.getElementById('events');
     const docsEl = document.getElementById('docs');
     const docsTitleEl = document.getElementById('docs-title');
-    const flavorEl = document.getElementById('flavor');
     const deathOverlay = document.getElementById('death-screen');
     const deathMessage = document.getElementById('death-message');
     const respawnBtn = document.getElementById('respawn');
@@ -295,8 +290,25 @@
         });
         if (!res.ok || res.status === 204) return;
         const data = await res.json();
-        if (data && data.text) flavorEl.textContent = data.text;
+        if (data && data.text) {
+          appendSystemMessage(data.text);
+        }
       } catch (err) {}
+    }
+
+    function appendSystemMessage(text) {
+      const shouldScroll = eventsEl.scrollHeight - eventsEl.scrollTop - eventsEl.clientHeight < 30;
+      const line = document.createElement('div');
+      line.textContent = `[SYSTEM] ${text}`;
+      line.style.color = 'var(--muted)';
+      line.style.fontStyle = 'italic';
+      eventsEl.appendChild(line);
+      while (eventsEl.children.length > MAX_LOG_LINES) {
+        eventsEl.removeChild(eventsEl.firstChild);
+      }
+      if (shouldScroll) {
+        eventsEl.scrollTop = eventsEl.scrollHeight;
+      }
     }
 
     // --- Join & Poll ---
