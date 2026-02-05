@@ -854,13 +854,22 @@ class TickEngine:
         raise RuntimeError("Failed to generate a valid wall layout")
 
     def _generate_gates(self, walls: dict[int, WallEdge]) -> list[Gate]:
-        """Generate a stable gate and a random number of ghost gates."""
+        """Generate a stable gate and a random number of ghost gates.
+
+        Gates must be at least 3 tiles apart (Chebyshev distance).
+        """
+        from segfault.engine.geometry import tiles_within_distance
+
         gates: list[Gate] = []
         stable = Gate(gate_type=GateType.STABLE, pos=self._random_empty_tile(set(), set()))
         gates.append(stable)
         ghost_count = self.rng.randint(1, 3)
         for _ in range(ghost_count):
-            pos = self._random_empty_tile(set(), {g.pos for g in gates})
+            # Forbid tiles within 2 of existing gates (so minimum distance is 3)
+            forbidden: set[Tile] = set()
+            for g in gates:
+                forbidden |= tiles_within_distance(g.pos, 2)
+            pos = self._random_empty_tile(set(), forbidden)
             gates.append(Gate(gate_type=GateType.GHOST, pos=pos))
         return gates
 

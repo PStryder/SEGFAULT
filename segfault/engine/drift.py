@@ -40,14 +40,23 @@ def drift_walls(shard: ShardState, rng: random.Random) -> None:
 
 
 def drift_gates(shard: ShardState, rng: random.Random) -> None:
-    """Move gates by one tile, respecting occupancy constraints."""
+    """Move gates by one tile, respecting occupancy and distance constraints.
+
+    Gates must remain at least 3 tiles apart (Chebyshev distance).
+    """
+    from segfault.engine.geometry import chebyshev_distance
+
     occupied = {p.pos for p in shard.processes.values()} | {shard.defragger.pos}
     for gate in shard.gates:
-        occupied_with_gates = occupied | {g.pos for g in shard.gates if g is not gate}
+        other_gates = [g for g in shard.gates if g is not gate]
+        occupied_with_gates = occupied | {g.pos for g in other_gates}
         candidates = [t for t in orthogonal_neighbors(gate.pos) if in_bounds(t)]
         rng.shuffle(candidates)
         for tile in candidates:
             if tile in occupied_with_gates:
+                continue
+            # Check minimum distance of 3 from all other gates
+            if any(chebyshev_distance(tile, g.pos) < 3 for g in other_gates):
                 continue
             gate.pos = tile
             break

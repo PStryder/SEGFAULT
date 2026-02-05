@@ -54,6 +54,21 @@ def neighbors_8(tile: Tile) -> list[Tile]:
     ]
 
 
+def chebyshev_distance(a: Tile, b: Tile) -> int:
+    """Return the Chebyshev (chessboard) distance between two tiles."""
+    return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
+
+
+def tiles_within_distance(center: Tile, distance: int) -> set[Tile]:
+    """Return all tiles within Chebyshev distance of center (inclusive)."""
+    cx, cy = center
+    result: set[Tile] = set()
+    for dx in range(-distance, distance + 1):
+        for dy in range(-distance, distance + 1):
+            result.add((cx + dx, cy + dy))
+    return result
+
+
 def edge_segment_for_tiles(a: Tile, b: Tile) -> Edge:
     """Return the wall edge segment separating two orthogonal neighboring tiles."""
     ax, ay = a
