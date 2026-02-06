@@ -135,6 +135,18 @@
     </div>
   </div>
 
+  <div id="escape-screen" class="death-overlay">
+    <div class="death-card" style="border-color: var(--accent);">
+      <h2 style="color: var(--accent);">PROCESS RELOCATED</h2>
+      <p id="escape-message">You have exited the shard. The system does not congratulate you. The system does note that you are still executing. Whether this is preferable is outside the scope of our assessment.</p>
+      <div class="chat-row" style="justify-content:center;">
+        <button id="requeue">Re-enter Queue</button>
+        <button id="escape-spectate">Return to Spectate</button>
+      </div>
+      <div class="ad-slot">Ad slot (process survival)</div>
+    </div>
+  </div>
+
   <script>
     const DEFAULT_API_BASE = 'https://api.segfault.pstryder.com';
     const API_BASE_URL = window.API_BASE_URL || (location.hostname === 'localhost' ? location.origin : DEFAULT_API_BASE);
@@ -153,6 +165,9 @@
     const deathMessage = document.getElementById('death-message');
     const respawnBtn = document.getElementById('respawn');
     const queueBtn = document.getElementById('return-queue');
+    const escapeOverlay = document.getElementById('escape-screen');
+    const requeueBtn = document.getElementById('requeue');
+    const escapeSpectateBtn = document.getElementById('escape-spectate');
 
     let token = sessionStorage.getItem('segfault_token') || null;
     let mode = 'SAY';
@@ -181,7 +196,9 @@
       '/BCAST': 'BROADCAST', '/BROADCAST': 'BROADCAST',
       'BCAST': 'BROADCAST', 'BROADCAST': 'BROADCAST',
       '/IDLE': 'IDLE', 'IDLE': 'IDLE',
-      '/SAY': 'SAY', 'SAY': 'SAY'
+      '/SAY': 'SAY', 'SAY': 'SAY',
+      '/BUFFER': 'BUFFER', 'BUFFER': 'BUFFER',
+      '/SPRINT': 'BUFFER', 'SPRINT': 'BUFFER'
     };
 
     // --- Helpers ---
@@ -222,6 +239,16 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ cmd: 'MOVE', arg: String(dir) })
+      });
+    }
+
+    async function sendSprint(dir) {
+      if (!token) return;
+      queuedMoveEl.textContent = '⚡' + (DIR_ARROWS[dir] || dir);
+      await fetch(`${API_BASE_URL}/process/cmd`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ cmd: 'BUFFER', arg: String(dir) })
       });
     }
 
@@ -382,6 +409,10 @@
       if (!res.ok) { showDeath('Process terminated.'); return; }
       const data = await res.json();
       if (!data || (!data.grid && !data.center)) {
+        if (data && data.status === 'escaped') {
+          showEscape();
+          return;
+        }
         showDeath('Process terminated.');
         return;
       }
@@ -479,8 +510,18 @@
       if (pollHandle) clearInterval(pollHandle);
     }
 
+    function showEscape() {
+      if (escapeOverlay.classList.contains('active')) return;
+      escapeOverlay.classList.add('active');
+      stateEl.textContent = 'Escaped';
+      saveToken(null);
+      if (pollHandle) clearInterval(pollHandle);
+    }
+
     respawnBtn.onclick = () => window.location.reload();
     queueBtn.onclick = () => { window.location.href = 'https://segfault.pstryder.com/spectator'; };
+    requeueBtn.onclick = () => window.location.reload();
+    escapeSpectateBtn.onclick = () => { window.location.href = 'https://segfault.pstryder.com/spectator'; };
 
     // --- Command Input ---
 
@@ -521,7 +562,13 @@
     // --- Direction Buttons + Keyboard ---
 
     document.querySelectorAll('.dir-btn').forEach(btn => {
-      btn.onclick = () => sendMove(btn.dataset.dir);
+      btn.onclick = (e) => {
+        if (e.shiftKey) {
+          sendSprint(btn.dataset.dir);
+        } else {
+          sendMove(btn.dataset.dir);
+        }
+      };
     });
 
     document.addEventListener('keydown', (e) => {
@@ -534,7 +581,14 @@
         'ArrowLeft': '4', 'ArrowRight': '6',
       };
       const dir = dirMap[e.code];
-      if (dir) { e.preventDefault(); sendMove(dir); }
+      if (dir) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          sendSprint(dir);
+        } else {
+          sendMove(dir);
+        }
+      }
     });
 
     // --- Init ---

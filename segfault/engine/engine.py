@@ -90,6 +90,7 @@ class TickEngine:
         self.process_to_shard: dict[str, str] = {}
         self.session_tokens: dict[str, tuple[str, int]] = {}
         self.process_events: dict[str, list[Event]] = {}
+        self.survived_processes: dict[str, str] = {}  # process_id -> "escaped" | "transferred"
 
     def create_shard(self) -> ShardState:
         """Create and register a new shard with walls, gates, and a defragmenter."""
@@ -141,6 +142,10 @@ class TickEngine:
                 self.session_tokens.pop(token, None)
                 return None
         return process_id
+
+    def check_survived(self, process_id: str) -> str | None:
+        """Check if a process escaped or transferred. Returns status and clears it."""
+        return self.survived_processes.pop(process_id, None)
 
     def buffer_command(self, process_id: str, cmd: Command) -> None:
         """Buffer the last valid command for a process (broadcasts are immediate)."""
@@ -525,7 +530,8 @@ class TickEngine:
                 self.persistence.record_survival(proc.call_sign)
                 shard.tick_events.survivals.append(proc.process_id)
                 shard.total_survivals += 1
-                self._remove_process(shard, proc)
+                self.survived_processes[proc.process_id] = "escaped"
+                self._remove_process(shard, proc, preserve_tokens=True)
             else:
                 self.persistence.record_ghost(proc.call_sign)
                 shard.tick_events.ghosts.append(proc.process_id)

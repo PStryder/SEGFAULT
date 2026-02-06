@@ -334,8 +334,11 @@ async def process_state(
         process_id = game_engine.resolve_token(resolved, settings.token_ttl_seconds)
         if not process_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        survived = game_engine.check_survived(process_id)
         data = game_engine.render_process_view(process_id)
     if not data:
+        if survived:
+            return ProcessStateResponse(tick=0, grid="", events=[], status=survived)
         # Process terminated or shard expired: return empty grid so the UI shows death.
         return ProcessStateResponse(tick=0, grid="", events=[])
     return ProcessStateResponse(**data)

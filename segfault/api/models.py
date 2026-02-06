@@ -25,6 +25,7 @@ class ProcessStateResponse(BaseModel):
     gates: list[list[int]] | None = None
     other_processes: list[list[int]] | None = None
     echo_tiles: list[dict] | None = None
+    status: str | None = None  # "escaped" | "transferred" | None
 
 
 class SpectatorShardSummary(BaseModel):
