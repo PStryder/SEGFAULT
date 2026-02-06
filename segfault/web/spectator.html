@@ -280,7 +280,7 @@
       const processes = new Map((data.processes || []).map(p => [p.pos.join(','), p.id]));
       const gates = new Map((data.gates || []).map(g => [g.pos.join(','), g.type]));
       const echoes = new Set((data.echo_tiles || []).map(e => e.pos.join(',')));
-      const defraggerPos = defraggerRevealed && data.defragger ? data.defragger.join(',') : null;
+      const defraggerPos = data.defragger ? data.defragger.join(',') : null;
       const wallSet = new Set((data.walls || []).map(w => wallKey(w.a, w.b)));
 
       for (let y = 0; y < height; y++) {
