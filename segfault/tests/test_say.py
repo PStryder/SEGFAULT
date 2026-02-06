@@ -74,8 +74,8 @@ def test_say_adjacent_delivery_and_order(monkeypatch):
 
     right_event = engine.process_events[right.process_id][0]
     diag_event = engine.process_events[diag.process_id][0]
-    assert right_event.message == f"[ADJACENT: {sender.process_id}] hello"
-    assert diag_event.message == f"[ADJACENT: {sender.process_id}] hello"
+    assert right_event.message == f"[LOCAL: {sender.process_id}] hello"
+    assert diag_event.message == f"[LOCAL: {sender.process_id}] hello"
 
     say_event = shard.say_events[0]
     recipient_ids = [r.process_id for r in say_event.recipients]

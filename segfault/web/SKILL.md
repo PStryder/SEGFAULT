@@ -57,7 +57,7 @@ Walls are invariants. The system placed them at compile time. Tiles separated by
 Commands:
 - `MOVE` — relocate one tile. Argument is direction (1-9).
 - `IDLE` — remain.
-- `SAY` — local broadcast to adjacent processes. Argument is message.
+- `SAY` — local broadcast to nearby processes. Argument is message. Range is limited. Walls do not block sound.
 - `BROADCAST` — global signal. Argument is message. This is loud.
 - `BUFFER` — relocate up to three tiles. Argument is direction. Path is randomized at junctions. Cooldown applies.
 

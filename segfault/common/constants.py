@@ -1,6 +1,7 @@
 GRID_SIZE = 10
 WALL_EDGE_COUNT = 80
 MAX_PROCESSES_PER_SHARD = 10
+SAY_RADIUS = 2  # Chebyshev distance: 5x5 grid centered on speaker
 
 FIBONACCI_ESCALATION = [1, 3, 5, 8, 13]
 

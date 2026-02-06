@@ -11,6 +11,7 @@ from segfault.common.constants import (
     GRID_SIZE,
     MAX_PROCESSES_PER_SHARD,
     QUIET_TICKS_WARNING,
+    SAY_RADIUS,
     WATCHDOG_COUNTDOWN,
 )
 from segfault.common.types import Broadcast, Command, CommandType, GateType, Tile
@@ -724,10 +725,12 @@ class TickEngine:
         if not sender:
             return
         ts = int(time.time() * 1000)
+        # SAY uses Chebyshev distance, ignores walls — sound carries
         recipients = [
             proc
             for pid, proc in shard.processes.items()
-            if pid != process_id and proc.alive and _is_adjacent(sender.pos, proc.pos, shard)
+            if pid != process_id and proc.alive
+            and _chebyshev(sender.pos, proc.pos) <= SAY_RADIUS
         ]
         recipients_by_pid = sorted(recipients, key=lambda proc: proc.process_id)
         recipients_by_spatial = sorted(
@@ -755,7 +758,7 @@ class TickEngine:
                     Event(kind="noise", message=artifact, timestamp_ms=ts)
                 )
                 continue
-            text = f"[ADJACENT: {process_id}] {message}"
+            text = f"[LOCAL: {process_id}] {message}"
             self.process_events.setdefault(proc.process_id, []).append(
                 Event(kind="local", message=text, timestamp_ms=ts)
             )
@@ -1081,3 +1084,7 @@ def _spatial_order(a: Tile, b: Tile) -> int:
         (1, 1): 9,
     }
     return order.get((dx, dy), 99)
+
+
+def _chebyshev(a: Tile, b: Tile) -> int:
+    return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
