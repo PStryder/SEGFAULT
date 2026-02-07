@@ -210,20 +210,24 @@ class TickEngine:
         else:
             shard.empty_ticks = 0
         if shard.empty_ticks >= self.empty_shard_ticks:
-            for proc in list(shard.processes.values()):
-                self._remove_process(shard, proc)
-            if self.enable_replay_logging:
-                self.persistence.finalize_replay_shard(
-                    shard.shard_id,
-                    total_ticks=shard.tick,
-                    stats={
-                        "total_processes": shard.total_processes,
-                        "total_kills": shard.total_kills,
-                        "total_survivals": shard.total_survivals,
-                        "total_ghosts": shard.total_ghosts,
-                    },
-                )
-            self.shards.pop(shard.shard_id, None)
+            # Always keep at least one shard alive
+            if len(self.shards) <= 1:
+                shard.empty_ticks = 0  # Reset counter, keep shard warm
+            else:
+                for proc in list(shard.processes.values()):
+                    self._remove_process(shard, proc)
+                if self.enable_replay_logging:
+                    self.persistence.finalize_replay_shard(
+                        shard.shard_id,
+                        total_ticks=shard.tick,
+                        stats={
+                            "total_processes": shard.total_processes,
+                            "total_kills": shard.total_kills,
+                            "total_survivals": shard.total_survivals,
+                            "total_ghosts": shard.total_ghosts,
+                        },
+                    )
+                self.shards.pop(shard.shard_id, None)
 
     def render_process_view(self, process_id: str) -> dict:
         """Render the process-visible snapshot for a given process id."""
