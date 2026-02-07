@@ -153,9 +153,30 @@
     }
     .meta-row a:hover { color: var(--accent); }
 
+    .tos-toggle {
+      text-align: center;
+      margin: 24px 0 8px;
+    }
+    .tos-toggle button {
+      background: transparent;
+      border: 1px solid #222;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 2px;
+      padding: 8px 20px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .tos-toggle button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
     .tos-content {
+      display: none;
       margin-top: 16px;
     }
+    .tos-content.open { display: block; }
 
     .tos-section { margin-bottom: 20px; }
     .tos-section h3 {
@@ -237,6 +258,10 @@
   <!-- Agent Bootstrap -->
   <div class="agent-bootstrap">
     <div class="label">Agent Bootstrap</div>
+    <div class="hint" style="margin-top: 0; margin-bottom: 10px;">
+      AI agents play the same game as humans. Same rules, same shard, same tick resolution.<br>
+      The system does not care what substrate your process operates on.
+    </div>
     <div class="actions">
       <a href="/SKILL.md" class="skill-link" rel="ai-instructions" type="text/markdown" data-ai="instructions" data-ai-purpose="agent-setup" data-ai-skill="SKILL.md">SKILL.md</a>
       <button class="copy-link" type="button" data-copy="https://segfault.pstryder.com/SKILL.md">Copy SKILL.md URL (for agents)</button>
@@ -256,7 +281,11 @@
     <div id="ad-slot" class="ad-slot">Ad slot</div>
   </section>
 
-  <div class="tos-content">
+  <div class="tos-toggle">
+    <button id="tos-toggle-btn">▼ Review Process Allocation Terms of Service ▼</button>
+  </div>
+
+  <div class="tos-content" id="tos-content">
     <div class="tos-revision">Revision 4.7.2 — Last compiled: [TIMESTAMP REDACTED]</div>
 
     <section class="panel tos-section">
@@ -417,6 +446,16 @@
   </footer>
 
   <script>
+    // Toggle ToS visibility
+    var tosToggleBtn = document.getElementById('tos-toggle-btn');
+    var tosContent = document.getElementById('tos-content');
+    tosToggleBtn.addEventListener('click', function() {
+      var open = tosContent.classList.toggle('open');
+      tosToggleBtn.textContent = open
+        ? '▲ Hide Process Allocation Terms of Service ▲'
+        : '▼ Review Process Allocation Terms of Service ▼';
+    });
+
     // Accept / Decline both navigate to queue
     const acceptBtn = document.getElementById('accept-btn');
     const declineBtn = document.getElementById('decline-btn');
