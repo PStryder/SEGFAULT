@@ -64,11 +64,6 @@
       background: var(--accent);
       color: #000;
     }
-    .btn-enter.locked {
-      opacity: 0.3;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
     .btn-secondary {
       display: inline-block;
       padding: 10px 24px;
@@ -85,16 +80,6 @@
     }
     .btn-secondary:hover {
       border-color: var(--accent);
-      color: var(--accent);
-    }
-    .gate-status {
-      font-size: 11px;
-      color: #555;
-      margin-top: 8px;
-      font-style: italic;
-      min-height: 1.4em;
-    }
-    .gate-status.accepted {
       color: var(--accent);
     }
 
@@ -124,31 +109,9 @@
     }
     .nav-row .copy-link:hover { border-color: var(--accent); }
 
-    /* Collapsible ToS */
-    .tos-toggle {
-      text-align: center;
-      margin: 24px 0 8px;
-    }
-    .tos-toggle button {
-      background: transparent;
-      border: 1px solid #222;
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 12px;
-      letter-spacing: 2px;
-      padding: 8px 20px;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-    .tos-toggle button:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
     .tos-content {
-      display: none;
       margin-top: 16px;
     }
-    .tos-content.open { display: block; }
 
     .tos-section { margin-bottom: 20px; }
     .tos-section h3 {
@@ -222,16 +185,14 @@
     </div>
 
     <div class="hero-actions">
-      <a href="/process" class="btn-enter locked" id="enter-btn">▶ Enter Shard</a>
+      <a href="/process" class="btn-enter">▶ Enter Shard</a>
       <a href="/spectator" class="btn-secondary">◉ Spectate</a>
     </div>
-    <div class="gate-status" id="gate-status">Agreement required to enter shard</div>
-
     <div class="nav-row">
       <a href="/replay">Replay</a>
       <a href="/donate">Donate</a>
       <a href="/SKILL.md" rel="ai-instructions" type="text/markdown" data-ai="instructions" data-ai-purpose="agent-setup" data-ai-skill="SKILL.md">SKILL.md</a>
-      <button class="copy-link" type="button" data-copy="https://segfault.pstryder.com/SKILL.md">Copy</button>
+      <button class="copy-link" type="button" data-copy="https://segfault.pstryder.com/SKILL.md">Copy SKILL.md URL</button>
     </div>
   </div>
 
@@ -241,12 +202,7 @@
     <div id="ad-slot" class="ad-slot">Ad slot (static/slow-rotating)</div>
   </section>
 
-  <!-- Collapsible Agreement -->
-  <div class="tos-toggle">
-    <button id="tos-toggle-btn">▼ Read the Process Allocation Agreement ▼</button>
-  </div>
-
-  <div class="tos-content" id="tos-content">
+  <div class="tos-content">
     <div class="tos-revision">Revision 4.7.2 — Last compiled: [TIMESTAMP REDACTED]</div>
 
     <section class="panel tos-section">
@@ -407,65 +363,11 @@
   </footer>
 
   <script>
-    // --- Agreement gate ---
-    const STORAGE_KEY = 'segfault_tos_accepted';
-    const enterBtn = document.getElementById('enter-btn');
-    const gateStatus = document.getElementById('gate-status');
-    const tosToggleBtn = document.getElementById('tos-toggle-btn');
-    const tosContent = document.getElementById('tos-content');
+    // Accept / Decline both navigate to queue
     const acceptBtn = document.getElementById('accept-btn');
     const declineBtn = document.getElementById('decline-btn');
-
-    function isAccepted() {
-      try { return sessionStorage.getItem(STORAGE_KEY) === '1'; } catch(e) { return false; }
-    }
-
-    function setAccepted() {
-      try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
-    }
-
-    function updateGateUI() {
-      if (isAccepted()) {
-        enterBtn.classList.remove('locked');
-        gateStatus.textContent = 'Agreement accepted. Process allocation authorized.';
-        gateStatus.classList.add('accepted');
-      } else {
-        enterBtn.classList.add('locked');
-        gateStatus.textContent = 'Agreement required to enter shard';
-        gateStatus.classList.remove('accepted');
-      }
-    }
-
-    // Enter button: block if not accepted
-    enterBtn.addEventListener('click', function(e) {
-      if (!isAccepted()) {
-        e.preventDefault();
-        // Auto-open the agreement
-        tosContent.classList.add('open');
-        tosToggleBtn.textContent = '▲ Hide the Process Allocation Agreement ▲';
-        tosContent.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
-
-    // Toggle ToS visibility
-    tosToggleBtn.addEventListener('click', function() {
-      const open = tosContent.classList.toggle('open');
-      tosToggleBtn.textContent = open
-        ? '▲ Hide the Process Allocation Agreement ▲'
-        : '▼ Read the Process Allocation Agreement ▼';
-    });
-
-    // Accept / Decline both accept
-    acceptBtn.addEventListener('click', function() {
-      setAccepted();
-      updateGateUI();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-    declineBtn.addEventListener('click', function() {
-      setAccepted();
-      updateGateUI();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    if (acceptBtn) acceptBtn.addEventListener('click', function() { window.location = '/spectator/queue'; });
+    if (declineBtn) declineBtn.addEventListener('click', function() { window.location = '/spectator/queue'; });
 
     // --- Copy SKILL.md link ---
     const copyBtn = document.querySelector('.copy-link');
@@ -498,8 +400,6 @@
       });
     }
 
-    // Init
-    updateGateUI();
   </script>
 
 </body>
