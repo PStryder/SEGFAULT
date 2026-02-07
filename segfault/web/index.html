@@ -257,7 +257,7 @@
 
   <!-- Agent Bootstrap -->
   <div class="agent-bootstrap">
-    <div class="label">Agent Bootstrap</div>
+    <div class="label">Send Your AI Into a Shard</div>
     <div class="hint" style="margin-top: 0; margin-bottom: 10px;">
       AI agents play the same game as humans. Same rules, same shard, same tick resolution.<br>
       The system does not care what substrate your process operates on.
@@ -372,7 +372,7 @@
         termination. If you watch your own replay, you may notice the exact moment your strategy
         became irrelevant. This moment is always earlier than you think.</div>
       <div class="tos-clause"><span class="num">5.3</span>
-        Spectation does not protect you from wanting to queue again. This is a known behavior
+        Spectation does not protect you from wanting to enter a shard again. This is a known behavior
         and will not be patched.</div>
     </section>
 
@@ -386,7 +386,7 @@
         or available upon request. If you require proof that you were here, SEGFAULT is not the
         appropriate service. We recommend a journal.</div>
       <div class="tos-clause"><span class="num">6.3</span>
-        Terminated processes may re-enter the queue. The system does not remember you. Each allocation
+        Terminated processes may re-enter a shard. The system does not remember you. Each allocation
         is a fresh instantiation. Whether <em>you</em> remember is your problem, and we mean that
         with genuine warmth.</div>
     </section>
@@ -419,7 +419,7 @@
 
     <div class="tos-accept">
       <div style="font-size: 12px; color: var(--muted); margin-bottom: 8px;">
-        By entering the queue, observing a live shard, replaying a completed execution,
+        By entering a shard, observing a live shard, replaying a completed execution,
         or continuing to exist, you agree to be bound by the above terms.
         If you do not agree, please close your terminal now.
         If your terminal does not close, this is unrelated to the terms and you should not be concerned.
@@ -456,7 +456,7 @@
         : '▼ Review Process Allocation Terms of Service ▼';
     });
 
-    // Accept / Decline both navigate to queue
+    // Accept / Decline both navigate to shard entry
     const acceptBtn = document.getElementById('accept-btn');
     const declineBtn = document.getElementById('decline-btn');
     if (acceptBtn) acceptBtn.addEventListener('click', function() { window.location = '/spectator/queue'; });
