@@ -56,6 +56,10 @@
       {
         "source": "/privacy",
         "destination": "/privacy.html"
+      },
+      {
+        "source": "/ads.txt",
+        "destination": "/ads.txt"
       }
     ]
   }
